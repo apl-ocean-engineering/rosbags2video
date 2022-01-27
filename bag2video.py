@@ -147,8 +147,8 @@ if __name__ == '__main__':
                         help='Rostime representing where to stop in the bag.')
     parser.add_argument('--encoding', choices=('rgb8', 'bgr8', 'mono8'), default='rgb8',
                         help='Encoding of the deserialized image. Default rgb8.')
-    parser.add_argument('--fourcc', '-c', action='store', default='MJPG',
-                        help='Specifies FourCC for the output video. Default MJPG.')
+    parser.add_argument('--codec', '-c', action='store', default='h264',
+                        help='Specifies FFMPEG codec to use.  Defaults to h264')
     parser.add_argument('--log', '-l',action='store',default='INFO',
                         help='Logging level. Default INFO.')
 
@@ -207,7 +207,7 @@ if __name__ == '__main__':
         logging.info('Opening video writer.')
         #fourcc = cv2.VideoWriter_fourcc(*args.fourcc) # opencv
         #writer = cv2.VideoWriter(outfile, fourcc, fps, (out_width,out_height)) # opencv
-        writer = imageio.get_writer(outfile, format='FFMPEG', mode='I', fps=fps, codec='h264' )
+        writer = imageio.get_writer(outfile, format='FFMPEG', mode='I', fps=fps, quality=10, codec=args.codec)
         #writer = imageio.get_writer(outfile, fps=fps, mode='I', format="FFMPEG", macro_block_size=1) # imageio
 
         logging.info('Writing video at %s.'% outfile)
