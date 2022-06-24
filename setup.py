@@ -19,7 +19,8 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    scripts=['bag2video.py', 'bag2images.py']
+    scripts=['bag2video.py', 'bag2images.py'],
+    install_requires=['pillow','rosbag','imageio-ffmpeg']
     # entry_points={
     # 'console_scripts': [
     #     'sample=sample:main',

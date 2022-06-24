@@ -3,7 +3,7 @@ bag2video
 
 Convert images from multiple topics in a rosbag to a constant framerate video with topics displayed side to side. Conversion from timestamps to constant framerate is achieved through duplicating frames. Images for each topic will be scaled to the same height and placed side to side horizontally.
 
-This should not be used for precise conversions. The primary purpose is to provide a visual for the image contents of a bag file for multiple topics at once. There are several quirks present as a tradeoff for simplicity and faster processing:
+This should not be used for precise conversions. The primary purpose is to provide a quick visual representation for the image contents of a bag file for multiple topics at once. There are several quirks present as a tradeoff for simplicity and faster processing:
 
 * The program updates for every relevant message in the bag file. Each update, the most recently processed images from each topic are horizontally concatenated. The resulting image is written for duration equal to the time since the last update. Black images are used as substitutes for topics that have not had a message.
 * If a particular topic ends earlier than the rest, then the program will continue using the most recent image from that topic. This behavior may or may not be desirable.
@@ -44,6 +44,17 @@ This script is heavily modified from the original; it uses Python 3.
       --fourcc FOURCC, -c FOURCC
                             Specifies FourCC for the output video. Default MJPG.
       --log LOG, -l LOG     Logging level. Default INFO.
+
+
+# Installation instructions
+
+The simplest installation is:
+
+```
+pip install .
+```
+
+or (`pip install -e .` for development).  This will install the necessary depenencies and install `bag2video.py` and `bag2images.py` in `$HOME/.local/bin`
 
 ## Steps to setting up a ROS + Python3 environment in conda
 
