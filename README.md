@@ -56,6 +56,23 @@ pip install .
 
 or (`pip install -e .` for development).  This will install the necessary depenencies and install `bag2video.py` and `bag2images.py` in `$HOME/.local/bin`
 
+**Note:** as of 6/2022 we experienced a bug with the version of `cv_bridge` installed from the Ubuntu package `python3-cv-bridge` version `1.13.0+ds-5build6`, where the package would crash with:
+
+```
+$ ./bag2video.py
+RuntimeError: FATAL: module compiled as little endian, but detected different endianness at runtime
+Traceback (most recent call last):
+File "./bag2video.py", line 14, in <module>
+    from cv_bridge import CvBridge
+  File "/usr/lib/python3/dist-packages/cv_bridge/__init__.py", line 6, in <module>
+    from cv_bridge.boost.cv_bridge_boost import cvtColorForDisplay, getCvType
+SystemError: initialization of cv_bridge_boost raised unreported exception
+```
+
+Use the version from the package `ros-noetic-cv-bridge` (version `1.16.0-1focal.20220107.002150` as of this writing)
+
+
+
 ## Steps to setting up a ROS + Python3 environment in conda
 
 ```
