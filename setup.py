@@ -20,7 +20,7 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     scripts=['bag2video.py', 'bag2images.py'],
-    install_requires=['pillow','pyrosbag','imageio-ffmpeg']
+    install_requires=['pillow','imageio','imageio-ffmpeg']
     # entry_points={
     # 'console_scripts': [
     #     'sample=sample:main',
