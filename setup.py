@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="bag2video", # Replace with your own username
-    version="0.0.2",
+    version="0.0.1",
     author="Aaron Marburg",
     author_email="amarburg@uw.edu",
     description="Scripts to process ROS bagfiles into videos",
@@ -20,7 +20,7 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     scripts=['bag2video.py', 'bag2images.py'],
-    install_requires=['pillow','imageio','imageio-ffmpeg', 'rosbags', 'rosbags_image']
+    install_requires=['pillow','imageio','imageio-ffmpeg']
     # entry_points={
     # 'console_scripts': [
     #     'sample=sample:main',
