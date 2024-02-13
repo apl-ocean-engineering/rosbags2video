@@ -2,6 +2,9 @@
 
 from __future__ import division
 import rosbag, rospy, numpy as np
+from pathlib import Path
+from rosbags.highlevel import AnyReader
+from rosbags.image import message_to_cvimage
 import sys, os, cv2, glob
 from itertools import repeat
 import imageio
@@ -52,27 +55,23 @@ def get_sizes(bag, topics=None, index=0, scale=1.0, start_time=rospy.Time(0), st
 
     return sizes
 
-def get_frequency(bag,topics=None, start_time=rospy.Time(0),stop_time=rospy.Time(sys.maxsize)):
-    info = bag.get_type_and_topic_info(topics)
-    logging.debug(info)
-
+def get_frequency(bags,topics=None, start_time=0,stop_time=sys.maxsize):
     # uses the highest topic message frequency as framerate
-    frequency = 0
+    duration = min(bags.duration, (stop_time-start_time))
+    highest_freq = 0
     for topic in topics:
-        topic_frequency = info[1][topic][3] # returns the reciprocal of the median difference in timestamps for the topic
-        logging.info("Topic %s has a frequency of %s."%(topic,topic_frequency))
-        if topic_frequency is not None:
-            frequency = max(frequency, topic_frequency)
+        msgcount = bags.topics[topic].msgcount
+        frequency = 10.0e-9 * duration / msgcount
+        highest_freq = max(highest_freq, frequency)
 
     try:
-        assert frequency>0
+        assert highest_freq>0
     except:
         logging.critical("Unable to calculate framerate from topic frequency.")
         logging.critical("May be caused by a lack of messages.")
         traceback.print_exc()
         sys.exit(1)
-
-    return frequency
+    return highest_freq
 
 def calc_out_size(sizes):
     return (sum(size[0] for size in sizes),sizes[0][1])
@@ -163,9 +162,9 @@ if __name__ == '__main__':
     if not args.viz:
         imshow = noshow
 
-    # convert numbers into rospy Time
-    start_time=rospy.Time(args.start)
-    stop_time=rospy.Time(args.end)
+    # Keep time as a float
+    start_time=args.start
+    stop_time=args.end
 
     try:
         assert start_time <= stop_time
@@ -188,11 +187,13 @@ if __name__ == '__main__':
             folder, name = os.path.split(bagfile)
             outfile = os.path.join(folder, name[:name.rfind('.')]) + '.mp4'
         bag = rosbag.Bag(bagfile, 'r')
+        bags = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
+        bags.open()
 
         fps = args.fps
         if not fps:
             logging.info('Calculating ideal output framerate.')
-            fps = get_frequency(bag, args.topics, start_time, stop_time)
+            fps = get_frequency(bags, args.topics, start_time, stop_time)
             logging.info('Output framerate of %.3f.'%fps)
         else:
             logging.info('Using manually set framerate of %.3f.'%fps)
@@ -216,3 +217,4 @@ if __name__ == '__main__':
         writer.close() # imageio
 
         logging.info('Done.')
+        bags.close()
