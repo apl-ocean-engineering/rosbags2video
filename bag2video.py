@@ -27,15 +27,17 @@ except ImportError:
         traceback.print_exc()
         sys.exit(1)
 
-def get_sizes(bag, topics=None, index=0, scale=1.0, start_time=rospy.Time(0), stop_time=rospy.Time(sys.maxsize)):
+def get_sizes(bags, topics=None, index=0, scale=1.0, start_time=0, stop_time=sys.maxsize):
     logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
     sizes = []
 
     for topic in topics:
         try:
-            iterator = bag.read_messages(topics=topic, start_time=start_time, end_time=stop_time)#, raw=True)
-            msg = next(iterator)[1] # read one message
-            sizes.append((msg.width, msg.height))
+            connections = [x for x in bags.connections if x.topic == topic]
+            for connection, timestamp, rawdata in bags.messages(connections=connections):
+                msg = bags.deserialize(rawdata, connection.msgtype) # read one message
+                sizes.append((msg.width, msg.height))
+                break
         except:
             logging.critical("No messages found for topic %s, or message does not have height/width." % topic)
             traceback.print_exc()
@@ -199,7 +201,7 @@ if __name__ == '__main__':
             logging.info('Using manually set framerate of %.3f.'%fps)
 
         logging.info('Calculating video sizes.')
-        sizes = get_sizes(bag, topics=args.topics, index=args.index,scale = args.scale, start_time=start_time, stop_time=stop_time)
+        sizes = get_sizes(bags, topics=args.topics, index=args.index,scale = args.scale, start_time=args.start, stop_time=args.end)
 
         logging.info('Calculating final image size.')
         out_width, out_height = calc_out_size(sizes)
