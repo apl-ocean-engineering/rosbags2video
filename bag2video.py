@@ -57,11 +57,11 @@ def get_sizes(bag, topics=None, index=0, scale=1.0, start_time=rospy.Time(0), st
 
 def get_frequency(bags,topics=None, start_time=0,stop_time=sys.maxsize):
     # uses the highest topic message frequency as framerate
-    duration = min(bags.duration, (stop_time-start_time))
+    duration = 10.0e-10 * min(bags.duration, (stop_time-start_time))
     highest_freq = 0
     for topic in topics:
         msgcount = bags.topics[topic].msgcount
-        frequency = 10.0e-9 * duration / msgcount
+        frequency = msgcount / duration
         highest_freq = max(highest_freq, frequency)
 
     try:
