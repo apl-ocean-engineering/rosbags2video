@@ -163,8 +163,8 @@ if __name__ == '__main__':
         imshow = noshow
 
     # Keep time as a float
-    start_time=args.start
-    stop_time=args.end
+    start_time=rospy.Time(args.start)
+    stop_time=rospy.Time(args.end)
 
     try:
         assert start_time <= stop_time
@@ -193,7 +193,7 @@ if __name__ == '__main__':
         fps = args.fps
         if not fps:
             logging.info('Calculating ideal output framerate.')
-            fps = get_frequency(bags, args.topics, start_time, stop_time)
+            fps = get_frequency(bags, args.topics, args.start, args.end)
             logging.info('Output framerate of %.3f.'%fps)
         else:
             logging.info('Using manually set framerate of %.3f.'%fps)
