@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 from __future__ import division
-import rosbag, rospy, numpy as np
 from pathlib import Path
+import numpy as np
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
 import sys, os, cv2, glob
@@ -11,21 +11,6 @@ import imageio
 import argparse
 import logging
 import traceback
-
-# try to find cv_bridge:
-try:
-    from cv_bridge import CvBridge
-except ImportError:
-    # assume we are on an older ROS version, and try loading the dummy manifest
-    # to see if that fixes the import error
-    try:
-        import roslib; roslib.load_manifest("bag2video")
-        from cv_bridge import CvBridge
-    except Exception:
-        logging.critical("Could not find ROS package: cv_bridge.")
-        logging.critical("If ROS version is pre-Groovy, try putting this package in ROS_PACKAGE_PATH.")
-        traceback.print_exc()
-        sys.exit(1)
 
 def get_sizes(bags, topics=None, index=0, scale=1.0, start_time=0, stop_time=sys.maxsize):
     logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
@@ -81,8 +66,7 @@ def calc_out_size(sizes):
 def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
 
-def write_frames(bag, writer, topics, sizes, fps, start_time=rospy.Time(0), stop_time=rospy.Time(sys.maxsize), viz=False, encoding='bgr8'):
-    bridge = CvBridge()
+def write_frames(bags, writer, topics, sizes, fps, start_time=0, stop_time=sys.maxsize, viz=False, encoding='bgr8'):
     convert = { topics[i]:i for i in range(len(topics))}
     frame_duration = 1.0/fps
 
@@ -90,36 +74,36 @@ def write_frames(bag, writer, topics, sizes, fps, start_time=rospy.Time(0), stop
     frame_num = 0
     count = 1
 
-    iterator = bag.read_messages(topics=topics, start_time=start_time, end_time=stop_time)
+    init = True
 
-    topic, msg, t = next(iterator)
-    image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
-    images[convert[topic]] = image
-    frame_num = int(t.to_sec()/frame_duration)
+    connections = [x for x in bags.connections if x.topic in topics]
+    for connection, t, rawdata in bags.messages(connections=connections):
+        topic = connection.topic
+        msg = bags.deserialize(rawdata, connection.msgtype)
+        time = msg.header.stamp.sec
+        if (init): 
+            image = message_to_cvimage(msg, encoding)
+            images[convert[topic]] = image
+            frame_num = int(time/frame_duration)
+            init = False
+        else: 
+            frame_num_next = int(time/frame_duration)
+            reps = frame_num_next-frame_num
+            logging.debug('Topic %s updated at time %s seconds, frame %s.' % (topic, time, frame_num_next))
+            # prevent unnecessary calculations
+            if reps>0:
+                # record the current information up to this point in time
+                logging.info('Writing image %s at time %.6f seconds, frame %s for %s frames.' % (count, time, frame_num, reps))
+                merged_image = merge_images(images, sizes)
+                for i in range(reps):
+                    #writer.write(merged_image) # opencv
+                    writer.append_data(merged_image) # imageio
+                imshow('win', merged_image)
+                frame_num = frame_num_next
+                count += 1
 
-    for topic, msg, t in iterator:
-
-        time=t.to_sec()
-
-        frame_num_next = int(time/frame_duration)
-        reps = frame_num_next-frame_num
-
-        logging.debug('Topic %s updated at time %s seconds, frame %s.' % (topic, time, frame_num_next))
-
-        # prevent unnecessary calculations
-        if reps>0:
-            # record the current information up to this point in time
-            logging.info('Writing image %s at time %.6f seconds, frame %s for %s frames.' % (count, time, frame_num, reps))
-            merged_image = merge_images(images, sizes)
-            for i in range(reps):
-                #writer.write(merged_image) # opencv
-                writer.append_data(merged_image) # imageio
-            imshow('win', merged_image)
-            frame_num = frame_num_next
-            count += 1
-
-        image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
-        images[convert[topic]] = image
+            image = message_to_cvimage(msg, encoding)
+            images[convert[topic]] = image
 
 def imshow(win, img):
     logging.debug("Window redrawn.")
@@ -165,11 +149,11 @@ if __name__ == '__main__':
         imshow = noshow
 
     # Keep time as a float
-    start_time=rospy.Time(args.start)
-    stop_time=rospy.Time(args.end)
+    # start_time=rospy.Time(args.start)
+    # stop_time=rospy.Time(args.end)
 
     try:
-        assert start_time <= stop_time
+        assert args.start <= args.end
     except:
         logging.critical("Start time is after stop time.")
         traceback.print_exc()
@@ -188,7 +172,6 @@ if __name__ == '__main__':
         if outfile is None:
             folder, name = os.path.split(bagfile)
             outfile = os.path.join(folder, name[:name.rfind('.')]) + '.mp4'
-        bag = rosbag.Bag(bagfile, 'r')
         bags = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
         bags.open()
 
@@ -214,7 +197,7 @@ if __name__ == '__main__':
         #writer = imageio.get_writer(outfile, fps=fps, mode='I', format="FFMPEG", macro_block_size=1) # imageio
 
         logging.info('Writing video at %s.'% outfile)
-        write_frames(bag=bag, writer=writer, topics=args.topics, sizes=sizes, fps=fps, start_time=start_time, stop_time=stop_time, encoding=args.encoding)
+        write_frames(bags=bags, writer=writer, topics=args.topics, sizes=sizes, fps=fps, start_time=args.start, stop_time=args.end, encoding=args.encoding)
         #writer.release() # opencv
         writer.close() # imageio
 
