@@ -6,13 +6,12 @@ import numpy as np
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
 import sys, os, cv2, glob
-from itertools import repeat
 import imageio
 import argparse
 import logging
 import traceback
 
-def get_sizes(bag_reader, topics=None, index=0, scale=1.0, start_time=0, stop_time=sys.maxsize):
+def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
     logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
     sizes = []
 
@@ -66,7 +65,7 @@ def calc_out_size(sizes):
 def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
 
-def write_frames(bag_reader, writer, topics, sizes, fps, start_time=0, stop_time=sys.maxsize, viz=False, encoding='bgr8'):
+def write_frames(bag_reader, writer, topics, sizes, fps, encoding='bgr8'):
     convert = { topics[i]:i for i in range(len(topics))}
     frame_duration = 1.0/fps
 
@@ -147,7 +146,7 @@ if __name__ == '__main__':
     # logging setup
     numeric_level = getattr(logging, args.log.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
+        raise ValueError('Invalid log level: %s' % numeric_level)
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=numeric_level)
     logging.info('Logging at level %s.',args.log.upper())
     if not args.viz:
@@ -185,22 +184,18 @@ if __name__ == '__main__':
             logging.info('Using manually set framerate of %.3f.'%fps)
 
         logging.info('Calculating video sizes.')
-        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale, start_time=args.start, stop_time=args.end)
+        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale)
 
         logging.info('Calculating final image size.')
         out_width, out_height = calc_out_size(sizes)
         logging.info('Resulting video of width %s and height %s.'%(out_width,out_height))
 
         logging.info('Opening video writer.')
-        #fourcc = cv2.VideoWriter_fourcc(*args.fourcc) # opencv
-        #writer = cv2.VideoWriter(outfile, fourcc, fps, (out_width,out_height)) # opencv
         writer = imageio.get_writer(outfile, format='FFMPEG', mode='I', fps=fps, quality=10, codec=args.codec)
-        #writer = imageio.get_writer(outfile, fps=fps, mode='I', format="FFMPEG", macro_block_size=1) # imageio
 
         logging.info('Writing video at %s.'% outfile)
-        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps, start_time=args.start, stop_time=args.end, encoding=args.encoding)
-        #writer.release() # opencv
-        writer.close() # imageio
+        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps, encoding=args.encoding)
+        writer.close() 
 
         logging.info('Done.')
         bag_reader.close()
