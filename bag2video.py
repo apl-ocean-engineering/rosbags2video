@@ -80,7 +80,9 @@ def write_frames(bag_reader, writer, topics, sizes, fps, start_time=0, stop_time
     for connection, t, rawdata in bag_reader.messages(connections=connections):
         topic = connection.topic
         msg = bag_reader.deserialize(rawdata, connection.msgtype)
-        time = msg.header.stamp.sec
+        # print(f'DEBUG: {msg.header.stamp}')
+        # exit(0)
+        time = to_sec(msg.header.stamp)
         if (init): 
             image = message_to_cvimage(msg, encoding)
             images[convert[topic]] = image
@@ -112,6 +114,9 @@ def imshow(win, img):
 
 def noshow(win, img):
     pass
+
+def to_sec(stamp):
+    return stamp.sec + 10.0e-10 * stamp.nanosec
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract and encode video from bag files.')
