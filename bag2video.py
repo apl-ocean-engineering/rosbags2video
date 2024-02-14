@@ -12,15 +12,15 @@ import argparse
 import logging
 import traceback
 
-def get_sizes(bags, topics=None, index=0, scale=1.0, start_time=0, stop_time=sys.maxsize):
+def get_sizes(bag_reader, topics=None, index=0, scale=1.0, start_time=0, stop_time=sys.maxsize):
     logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
     sizes = []
 
     for topic in topics:
         try:
-            connections = [x for x in bags.connections if x.topic == topic]
-            for connection, timestamp, rawdata in bags.messages(connections=connections):
-                msg = bags.deserialize(rawdata, connection.msgtype) # read one message
+            connections = [x for x in bag_reader.connections if x.topic == topic]
+            for connection, timestamp, rawdata in bag_reader.messages(connections=connections):
+                msg = bag_reader.deserialize(rawdata, connection.msgtype) # read one message
                 sizes.append((msg.width, msg.height))
                 break
         except:
@@ -42,12 +42,12 @@ def get_sizes(bags, topics=None, index=0, scale=1.0, start_time=0, stop_time=sys
 
     return sizes
 
-def get_frequency(bags,topics=None, start_time=0,stop_time=sys.maxsize):
+def get_frequency(bag_reader,topics=None, start_time=0,stop_time=sys.maxsize):
     # uses the highest topic message frequency as framerate
-    duration = 10.0e-10 * min(bags.duration, (stop_time-start_time))
+    duration = 10.0e-10 * min(bag_reader.duration, (stop_time-start_time))
     highest_freq = 0
     for topic in topics:
-        msgcount = bags.topics[topic].msgcount
+        msgcount = bag_reader.topics[topic].msgcount
         frequency = msgcount / duration
         highest_freq = max(highest_freq, frequency)
 
@@ -66,7 +66,7 @@ def calc_out_size(sizes):
 def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
 
-def write_frames(bags, writer, topics, sizes, fps, start_time=0, stop_time=sys.maxsize, viz=False, encoding='bgr8'):
+def write_frames(bag_reader, writer, topics, sizes, fps, start_time=0, stop_time=sys.maxsize, viz=False, encoding='bgr8'):
     convert = { topics[i]:i for i in range(len(topics))}
     frame_duration = 1.0/fps
 
@@ -76,10 +76,10 @@ def write_frames(bags, writer, topics, sizes, fps, start_time=0, stop_time=sys.m
 
     init = True
 
-    connections = [x for x in bags.connections if x.topic in topics]
-    for connection, t, rawdata in bags.messages(connections=connections):
+    connections = [x for x in bag_reader.connections if x.topic in topics]
+    for connection, t, rawdata in bag_reader.messages(connections=connections):
         topic = connection.topic
-        msg = bags.deserialize(rawdata, connection.msgtype)
+        msg = bag_reader.deserialize(rawdata, connection.msgtype)
         time = msg.header.stamp.sec
         if (init): 
             image = message_to_cvimage(msg, encoding)
@@ -148,10 +148,6 @@ if __name__ == '__main__':
     if not args.viz:
         imshow = noshow
 
-    # Keep time as a float
-    # start_time=rospy.Time(args.start)
-    # stop_time=rospy.Time(args.end)
-
     try:
         assert args.start <= args.end
     except:
@@ -172,19 +168,19 @@ if __name__ == '__main__':
         if outfile is None:
             folder, name = os.path.split(bagfile)
             outfile = os.path.join(folder, name[:name.rfind('.')]) + '.mp4'
-        bags = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
-        bags.open()
+        bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
+        bag_reader.open()
 
         fps = args.fps
         if not fps:
             logging.info('Calculating ideal output framerate.')
-            fps = get_frequency(bags, args.topics, args.start, args.end)
+            fps = get_frequency(bag_reader, args.topics, args.start, args.end)
             logging.info('Output framerate of %.3f.'%fps)
         else:
             logging.info('Using manually set framerate of %.3f.'%fps)
 
         logging.info('Calculating video sizes.')
-        sizes = get_sizes(bags, topics=args.topics, index=args.index,scale = args.scale, start_time=args.start, stop_time=args.end)
+        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale, start_time=args.start, stop_time=args.end)
 
         logging.info('Calculating final image size.')
         out_width, out_height = calc_out_size(sizes)
@@ -197,9 +193,9 @@ if __name__ == '__main__':
         #writer = imageio.get_writer(outfile, fps=fps, mode='I', format="FFMPEG", macro_block_size=1) # imageio
 
         logging.info('Writing video at %s.'% outfile)
-        write_frames(bags=bags, writer=writer, topics=args.topics, sizes=sizes, fps=fps, start_time=args.start, stop_time=args.end, encoding=args.encoding)
+        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps, start_time=args.start, stop_time=args.end, encoding=args.encoding)
         #writer.release() # opencv
         writer.close() # imageio
 
         logging.info('Done.')
-        bags.close()
+        bag_reader.close()
