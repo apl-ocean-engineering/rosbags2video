@@ -65,7 +65,7 @@ def calc_out_size(sizes):
 def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
 
-def write_frames(bag_reader, writer, topics, sizes, fps, encoding='bgr8'):
+def write_frames(bag_reader, writer, topics, sizes, fps, viz, encoding='bgr8'):
     convert = { topics[i]:i for i in range(len(topics))}
     frame_duration = 1.0/fps
 
@@ -99,7 +99,8 @@ def write_frames(bag_reader, writer, topics, sizes, fps, encoding='bgr8'):
                 for i in range(reps):
                     #writer.write(merged_image) # opencv
                     writer.append_data(merged_image) # imageio
-                imshow('win', merged_image)
+                if viz:
+                    imshow('win', merged_image)
                 frame_num = frame_num_next
                 count += 1
 
@@ -111,13 +112,10 @@ def imshow(win, img):
     cv2.imshow(win, img)
     cv2.waitKey(1)
 
-def noshow(win, img):
-    pass
-
 def to_sec(stamp):
     return stamp.sec + 10.0e-10 * stamp.nanosec
 
-if __name__ == '__main__':
+def main(): 
     parser = argparse.ArgumentParser(description='Extract and encode video from bag files.')
     parser.add_argument('bagfile', help='Specifies the location of the bag file.')
     parser.add_argument('topics', nargs='+',help='Image topics to merge in output video.')
@@ -129,7 +127,7 @@ if __name__ == '__main__':
                         help='Destination of the video file. Defaults to the folder of the bag file.')
     parser.add_argument('--fps', '-f', action='store', default=None, type=float,
                         help='FPS of the output video. If not specified, FPS will be set to the maximum frequency of the topics.')
-    parser.add_argument('--viz', '-v', action='store_true', help='Display frames in a GUI window.')
+    parser.add_argument('--viz', '-v', action='store', default=False, help='Display frames in a GUI window.')
     parser.add_argument('--start', '-s', action='store', default=0, type=float,
                         help='Rostime representing where to start in the bag.')
     parser.add_argument('--end', '-e', action='store', default=sys.maxsize, type=float,
@@ -149,8 +147,6 @@ if __name__ == '__main__':
         raise ValueError('Invalid log level: %s' % numeric_level)
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=numeric_level)
     logging.info('Logging at level %s.',args.log.upper())
-    if not args.viz:
-        imshow = noshow
 
     try:
         assert args.start <= args.end
@@ -194,8 +190,11 @@ if __name__ == '__main__':
         writer = imageio.get_writer(outfile, format='FFMPEG', mode='I', fps=fps, quality=10, codec=args.codec)
 
         logging.info('Writing video at %s.'% outfile)
-        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps, encoding=args.encoding)
+        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps,  viz=args.viz, encoding=args.encoding)
         writer.close() 
 
         logging.info('Done.')
         bag_reader.close()
+
+if __name__ == '__main__':
+    main()
