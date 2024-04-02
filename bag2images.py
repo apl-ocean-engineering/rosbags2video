@@ -2,8 +2,7 @@
 
 from __future__ import division
 import rosbag, rospy, numpy as np
-import sys, os, cv2, glob
-from itertools import repeat
+import sys, cv2, glob
 import imageio
 import argparse
 import logging
