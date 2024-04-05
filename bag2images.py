@@ -13,7 +13,7 @@ from pathlib import Path
 from cv_bridge import CvBridge
 
 
-def get_sizes(bag_reader, topics=None, index=0, scale=1.0, start_time=rospy.Time(0), stop_time=rospy.Time(sys.maxsize)):
+def get_sizes(bag_reader, topics=None, index=0, scale=1.0,):
     logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
     sizes = []
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         bag = rosbag.Bag(bagfile, 'r')
 
         logging.info('Calculating video sizes.')
-        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale, start_time=start_time, stop_time=stop_time)
+        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale)
 
         logging.info('Calculating final image size.')
         out_width, out_height = calc_out_size(sizes)
