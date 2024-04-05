@@ -2,7 +2,9 @@
 
 from __future__ import division
 import rosbag, rospy, numpy as np
-import sys, cv2, glob
+from rosbags.highlevel import AnyReader
+from rosbags.image import message_to_cvimage
+import sys, os, cv2, glob
 import imageio
 import argparse
 import logging
@@ -11,15 +13,17 @@ from pathlib import Path
 from cv_bridge import CvBridge
 
 
-def get_sizes(bag, topics=None, index=0, scale=1.0, start_time=rospy.Time(0), stop_time=rospy.Time(sys.maxsize)):
+def get_sizes(bag_reader, topics=None, index=0, scale=1.0, start_time=rospy.Time(0), stop_time=rospy.Time(sys.maxsize)):
     logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
     sizes = []
 
     for topic in topics:
         try:
-            iterator = bag.read_messages(topics=topic, start_time=start_time, end_time=stop_time)#, raw=True)
-            msg = next(iterator)[1] # read one message
-            sizes.append((msg.width, msg.height))
+            connections = [x for x in bag_reader.connections if x.topic == topic]
+            for connection, timestamp, rawdata in bag_reader.messages(connections=connections):
+                msg = bag_reader.deserialize(rawdata, connection.msgtype) # read one message
+                sizes.append((msg.width, msg.height))
+                break
         except:
             logging.critical("No messages found for topic %s, or message does not have height/width." % topic)
             traceback.print_exc()
@@ -144,10 +148,12 @@ if __name__ == '__main__':
 
     for bagfile in glob.glob(args.bagfile):
         logging.info('Proccessing bag %s.'% bagfile)
+        bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
+        bag_reader.open()
         bag = rosbag.Bag(bagfile, 'r')
 
         logging.info('Calculating video sizes.')
-        sizes = get_sizes(bag, topics=args.topics, index=args.index,scale = args.scale, start_time=start_time, stop_time=stop_time)
+        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale, start_time=start_time, stop_time=stop_time)
 
         logging.info('Calculating final image size.')
         out_width, out_height = calc_out_size(sizes)
