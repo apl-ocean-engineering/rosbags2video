@@ -85,7 +85,7 @@ def to_sec(stamp):
 def sec_to_ns(sec):
     return int(sec * 1e9)
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Extract and encode video from bag files.')
     parser.add_argument('bagfile', help='Specifies the location of the bag file.')
     parser.add_argument('topics', nargs='+',help='Image topics to merge in output video.')
@@ -156,3 +156,6 @@ if __name__ == '__main__':
                          start_time=start_time, stop_time=stop_time, encoding=args.encoding, skip=args.skip)
 
         logging.info('Done.')
+
+if __name__ == '__main__':
+    main()
