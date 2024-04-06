@@ -43,7 +43,7 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
 
 def get_frequency(bag_reader,topics=None, start_time=0,stop_time=sys.maxsize):
     # uses the highest topic message frequency as framerate
-    duration = 10.0e-10 * min(bag_reader.duration, (stop_time-start_time))
+    duration = min(10.0e-10 * bag_reader.duration, (stop_time-start_time))
     highest_freq = 0
     for topic in topics:
         msgcount = bag_reader.topics[topic].msgcount
@@ -65,7 +65,7 @@ def calc_out_size(sizes):
 def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
 
-def write_frames(bag_reader, writer, topics, sizes, fps, viz, encoding='bgr8'):
+def write_frames(bag_reader, writer, topics, sizes, fps, viz, encoding='bgr8', start_time=0,stop_time=sys.maxsize):
     convert = { topics[i]:i for i in range(len(topics))}
     frame_duration = 1.0/fps
 
@@ -76,7 +76,7 @@ def write_frames(bag_reader, writer, topics, sizes, fps, viz, encoding='bgr8'):
     init = True
 
     connections = [x for x in bag_reader.connections if x.topic in topics]
-    for connection, t, rawdata in bag_reader.messages(connections=connections):
+    for connection, t, rawdata in bag_reader.messages(connections=connections, start=sec_to_ns(start_time), stop=sec_to_ns(stop_time)):
         topic = connection.topic
         msg = bag_reader.deserialize(rawdata, connection.msgtype)
         # print(f'DEBUG: {msg.header.stamp}')
@@ -115,6 +115,9 @@ def imshow(win, img):
 def to_sec(stamp):
     return stamp.sec + 10.0e-10 * stamp.nanosec
 
+def sec_to_ns(sec):
+    return int(sec * 1e9)
+
 def main(): 
     parser = argparse.ArgumentParser(description='Extract and encode video from bag files.')
     parser.add_argument('bagfile', help='Specifies the location of the bag file.')
@@ -148,8 +151,11 @@ def main():
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=numeric_level)
     logging.info('Logging at level %s.',args.log.upper())
 
+    start_time=args.start
+    stop_time=args.end
+
     try:
-        assert args.start <= args.end
+        assert start_time <= stop_time
     except:
         logging.critical("Start time is after stop time.")
         traceback.print_exc()
@@ -190,7 +196,7 @@ def main():
         writer = imageio.get_writer(outfile, format='FFMPEG', mode='I', fps=fps, quality=10, codec=args.codec)
 
         logging.info('Writing video at %s.'% outfile)
-        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps,  viz=args.viz, encoding=args.encoding)
+        write_frames(bag_reader=bag_reader, writer=writer, topics=args.topics, sizes=sizes, fps=fps,  viz=args.viz, encoding=args.encoding, start_time=start_time, stop_time=stop_time)
         writer.close() 
 
         logging.info('Done.')
