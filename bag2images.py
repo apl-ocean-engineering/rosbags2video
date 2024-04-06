@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from __future__ import division
-import rosbag, rospy, numpy as np
+import numpy as np
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
 import sys, os, cv2, glob
@@ -49,23 +49,19 @@ def calc_out_size(sizes):
 def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
 
-def write_frames(bag, outdir, topics, sizes, start_time=rospy.Time(0),
-                    stop_time=rospy.Time(sys.maxsize), viz=False, encoding='bgr8', skip=1):
+def write_frames(bag_reader, outdir, topics, sizes, start_time=0,
+                    stop_time=sys.maxsize, viz=False, encoding='bgr8', skip=1):
     bridge = CvBridge()
     convert = { topics[i]:i for i in range(len(topics))}
 
     images = [np.zeros((sizes[i][1],sizes[i][0],3), np.uint8) for i in range(len(topics))]
     count = 0
 
-    iterator = bag.read_messages(topics=topics, start_time=start_time, end_time=stop_time)
-
-    topic, msg, t = next(iterator)
-    image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
-    images[convert[topic]] = image
-
-    for topic, msg, t in iterator:
-
-        time=t.to_sec()
+    connections = [x for x in bag_reader.connections if x.topic in topics]
+    for connection, t, rawdata in bag_reader.messages(connections=connections, start=sec_to_ns(start_time), stop=sec_to_ns(stop_time)):
+        topic = connection.topic
+        msg = bag_reader.deserialize(rawdata, connection.msgtype)
+        time = to_sec(msg.header.stamp)
 
         logging.debug('Topic %s updated at time %s seconds' % (topic, time ))
 
@@ -73,6 +69,8 @@ def write_frames(bag, outdir, topics, sizes, start_time=rospy.Time(0),
 
             # record the current information up to this point in time
             logging.info('Writing image %s at time %.6f seconds.' % (count, time) )
+            image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
+            images[convert[topic]] = image
             merged_image = merge_images(images, sizes)
 
             outpath = outdir / ( "image_%06d.png" % count )
@@ -81,15 +79,11 @@ def write_frames(bag, outdir, topics, sizes, start_time=rospy.Time(0),
 
         count += 1
 
-        image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
-        images[convert[topic]] = image
+def to_sec(stamp):
+    return stamp.sec + 10.0e-10 * stamp.nanosec
 
-    merged_image = merge_images(images, sizes)
-
-    outpath = outdir / ( "image_%06d.png" % count )
-    logging.debug("Writing %s" % outpath)
-    imageio.imwrite( outpath, merged_image )
-
+def sec_to_ns(sec):
+    return int(sec * 1e9)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract and encode video from bag files.')
@@ -129,8 +123,8 @@ if __name__ == '__main__':
     args.outdir.mkdir(exist_ok=True)
 
     # convert numbers into rospy Time
-    start_time=rospy.Time(args.start)
-    stop_time=rospy.Time(args.end)
+    start_time=args.start
+    stop_time=args.end
 
     try:
         assert start_time <= stop_time
@@ -150,7 +144,6 @@ if __name__ == '__main__':
         logging.info('Proccessing bag %s.'% bagfile)
         bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
         bag_reader.open()
-        bag = rosbag.Bag(bagfile, 'r')
 
         logging.info('Calculating video sizes.')
         sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale)
@@ -159,7 +152,7 @@ if __name__ == '__main__':
         out_width, out_height = calc_out_size(sizes)
         logging.info('Resulting video of width %s and height %s.'%(out_width,out_height))
 
-        write_frames(bag=bag, outdir=args.outdir, topics=args.topics, sizes=sizes,
+        write_frames(bag_reader=bag_reader, outdir=args.outdir, topics=args.topics, sizes=sizes,
                          start_time=start_time, stop_time=stop_time, encoding=args.encoding, skip=args.skip)
 
         logging.info('Done.')
