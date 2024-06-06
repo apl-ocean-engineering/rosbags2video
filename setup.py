@@ -19,8 +19,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    scripts=['bag2video.py', 'bag2images.py'],
-    install_requires=['numpy', 'opencv-python', 'imageio', 'rosbags', 'rosbags-image'],
+    install_requires=['numpy', 'opencv-python', 'imageio[ffmpeg]', 'rosbags', 'rosbags-image'],
     entry_points={
     'console_scripts': [
         'bag2video=bag2video:main', 
