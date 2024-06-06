@@ -4,6 +4,7 @@ from __future__ import division
 import numpy as np
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
+from timeit import default_timer as timer
 import sys, os, cv2, glob
 import imageio
 import argparse
@@ -11,43 +12,14 @@ import logging
 import traceback
 from pathlib import Path
 from cv_bridge import CvBridge
+from concurrent.futures import ThreadPoolExecutor, wait
+import concurrent.futures
 
+import bag2lib
+from bag2lib import stamp_to_sec, sec_to_ns
 
-def get_sizes(bag_reader, topics=None, index=0, scale=1.0,):
-    logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
-    sizes = []
-
-    for topic in topics:
-        try:
-            connections = [x for x in bag_reader.connections if x.topic == topic]
-            for connection, timestamp, rawdata in bag_reader.messages(connections=connections):
-                msg = bag_reader.deserialize(rawdata, connection.msgtype) # read one message
-                sizes.append((msg.width, msg.height))
-                break
-        except:
-            logging.critical("No messages found for topic %s, or message does not have height/width." % topic)
-            traceback.print_exc()
-            sys.exit(1)
-
-    target_height = int(sizes[index][1]*scale)
-
-    # output original and scaled sizes
-    for i in range(len(topics)):
-        logging.info('Topic %s originally of height %s and width %s' % (topics[i],sizes[i][0],sizes[i][1]))
-        image_height = sizes[i][1]
-        image_width = sizes[i][0]
-
-        # rescale to desired height while keeping aspect ratio
-        sizes[i] = (int(1.0*image_width*target_height/image_height),target_height)
-        logging.info('Topic %s rescaled to height %s and width %s.' % (topics[i],sizes[i][0],sizes[i][1]))
-
-    return sizes
-
-def calc_out_size(sizes):
-    return (sum(size[0] for size in sizes),sizes[0][1])
-
-def merge_images(images, sizes):
-    return cv2.hconcat([cv2.resize(images[i],sizes[i]) for i in range(len(images))])
+def write_image( outpath, image ):
+    imageio.imwrite(outpath, image )
 
 def write_frames(bag_reader, outdir, topics, sizes, start_time=0,
                     stop_time=sys.maxsize, viz=False, encoding='bgr8', skip=1):
@@ -55,40 +27,53 @@ def write_frames(bag_reader, outdir, topics, sizes, start_time=0,
     convert = { topics[i]:i for i in range(len(topics))}
 
     images = [np.zeros((sizes[i][1],sizes[i][0],3), np.uint8) for i in range(len(topics))]
-    count = 0
 
-    connections = [x for x in bag_reader.connections if x.topic in topics]
-    for connection, t, rawdata in bag_reader.messages(connections=connections, start=sec_to_ns(start_time), stop=sec_to_ns(stop_time)):
-        topic = connection.topic
-        msg = bag_reader.deserialize(rawdata, connection.msgtype)
-        time = to_sec(msg.header.stamp)
+    start = timer()
+    num_msgs = 0
 
-        logging.debug('Topic %s updated at time %s seconds' % (topic, time ))
+    pending = []
 
-        if (count % skip == 0):
+    with ThreadPoolExecutor(max_workers=2) as executor:
 
-            # record the current information up to this point in time
-            logging.info('Writing image %s at time %.6f seconds.' % (count, time) )
-            image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
-            images[convert[topic]] = image
-            merged_image = merge_images(images, sizes)
+        connections = [x for x in bag_reader.connections if x.topic in topics]
+        for connection, t, rawdata in bag_reader.messages(connections=connections, start=sec_to_ns(start_time), stop=sec_to_ns(stop_time)):
+            topic = connection.topic
+            msg = bag_reader.deserialize(rawdata, connection.msgtype)
+            time = stamp_to_sec(msg.header.stamp)
 
-            outpath = outdir / ( "image_%06d.png" % count )
-            logging.debug("Writing %s" % outpath)
-            imageio.imwrite( outpath, merged_image )
+            logging.debug('Topic %s updated at time %s seconds' % (topic, time ))
 
-        count += 1
+            if (num_msgs % skip == 0):
 
-def to_sec(stamp):
-    return stamp.sec + 10.0e-10 * stamp.nanosec
+                # record the current information up to this point in time
+                logging.info('Writing image %s at time %.6f seconds.' % (num_msgs, time) )
+                image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
+                images[convert[topic]] = image
+                merged_image = bag2lib.merge_images(images, sizes)
 
-def sec_to_ns(sec):
-    return int(sec * 1e9)
+                outpath = outdir / ( "image_%06d.png" % num_msgs )
+                logging.debug("Writing %s" % outpath)
+
+                pending.append(executor.submit( write_image, outpath, merged_image ))
+                #imageio.imwrite( outpath, merged_image )
+
+                if len(pending) > 10:
+                    wait(pending, return_when=concurrent.futures.FIRST_COMPLETED)
+
+            num_msgs += 1
+
+
+    end = timer()
+    logging.info(f"Wrote {num_msgs} messages in {end-start:.2f} seconds")
+
 
 def main():
     parser = argparse.ArgumentParser(description='Extract and encode video from bag files.')
-    parser.add_argument('bagfile', help='Specifies the location of the bag file.')
-    parser.add_argument('topics', nargs='+',help='Image topics to merge in output video.')
+
+    parser.add_argument('bagfiles', nargs="+", help='Specifies the location of the bag file.')
+
+    parser.add_argument('--topic', nargs=1, help='Image topic to show in output video (maybe specified multiple times).')
+
     parser.add_argument('--index', '-i', action='store',default=0, type=int,
                         help='Resizes all images to match the height of the topic specified. Default 0.')
     parser.add_argument('--scale', '-x', action='store',default=1, type=float,
@@ -110,6 +95,9 @@ def main():
 
     parser.add_argument('--log', '-l',action='store',default='INFO',
                         help='Logging level. Default INFO.')
+
+    parser.add_argument("--timestamp", action='store_true', help="Write timestamp into each image")
+
 
     args = parser.parse_args()
 
@@ -134,25 +122,25 @@ def main():
         sys.exit(1)
 
     try:
-        assert args.index < len(args.topics)
+        assert args.index < len(args.topic)
     except:
         logging.critical("Index specified for resizing is out of bounds.")
         traceback.print_exc()
         sys.exit(1)
 
-    for bagfile in glob.glob(args.bagfile):
+    for bagfile in args.bagfiles:
         logging.info('Proccessing bag %s.'% bagfile)
         bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
         bag_reader.open()
 
         logging.info('Calculating video sizes.')
-        sizes = get_sizes(bag_reader, topics=args.topics, index=args.index,scale = args.scale)
+        sizes = bag2lib.get_sizes(bag_reader, topics=args.topic, index=args.index,scale = args.scale)
 
         logging.info('Calculating final image size.')
-        out_width, out_height = calc_out_size(sizes)
+        out_width, out_height = bag2lib.calc_out_size(sizes)
         logging.info('Resulting video of width %s and height %s.'%(out_width,out_height))
 
-        write_frames(bag_reader=bag_reader, outdir=args.outdir, topics=args.topics, sizes=sizes,
+        write_frames(bag_reader=bag_reader, outdir=args.outdir, topics=args.topic, sizes=sizes,
                          start_time=start_time, stop_time=stop_time, encoding=args.encoding, skip=args.skip)
 
         logging.info('Done.')
