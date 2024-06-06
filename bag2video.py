@@ -93,7 +93,7 @@ def main():
 
     parser.add_argument('bagfiles', nargs="+", help='Specifies the location of the bag file.')
 
-    parser.add_argument('--topic', nargs=1, help='Image topic to show in output video (maybe specified multiple times).')
+    parser.add_argument('--topic', action="append", help='Image topic to show in output video (maybe specified multiple times).')
 
     parser.add_argument('--index', '-i', action='store',default=0, type=int,
                         help='Resizes all images to match the height of the topic specified. Default 0.')
@@ -125,6 +125,8 @@ def main():
         raise ValueError('Invalid log level: %s' % numeric_level)
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=numeric_level)
     logging.info('Logging at level %s.',args.log.upper())
+
+    logging.info(f"Movie will contain topics: {args.topic}")
 
     start_time=args.start
     stop_time=args.end
