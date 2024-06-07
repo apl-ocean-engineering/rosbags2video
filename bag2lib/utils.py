@@ -16,7 +16,7 @@ def sec_to_ns(sec):
     return int(sec * 1e9)
 
 def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
-    logging.debug("Resizing height to topic %s (index %d)." % (topics[index] , index))
+    logging.debug(f"Resizing height to topic {topics[index]} (index {index}).")
     sizes = []
 
     for topic in topics:
@@ -24,10 +24,16 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
             connections = [x for x in bag_reader.connections if x.topic == topic]
             for connection, timestamp, rawdata in bag_reader.messages(connections=connections):
                 msg = bag_reader.deserialize(rawdata, connection.msgtype) # read one message
-                sizes.append((msg.width, msg.height))
+
+                # message_to_cvimage will transparently handle either Image of CompressedImage
+                img = message_to_cvimage(msg)
+                img_sz = img.shape
+
+                # width, height
+                sizes.append((img_sz[1], img_sz[0]))
                 break
         except:
-            logging.critical("No messages found for topic %s, or message does not have height/width." % topic)
+            logging.critical(f"No messages found for topic {topic}, or message does not have height/width.")
             traceback.print_exc()
             sys.exit(1)
 
@@ -35,13 +41,13 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
 
     # output original and scaled sizes
     for i in range(len(topics)):
-        logging.info('Topic %s originally of height %s and width %s' % (topics[i],sizes[i][0],sizes[i][1]))
+        logging.info(f"Topic {topics[i]} originally {sizes[i][0]} x {sizes[i][1]}" )
         image_height = sizes[i][1]
         image_width = sizes[i][0]
 
         # rescale to desired height while keeping aspect ratio
         sizes[i] = (int(1.0*image_width*target_height/image_height),target_height)
-        logging.info('Topic %s rescaled to height %s and width %s.' % (topics[i],sizes[i][0],sizes[i][1]))
+        logging.info(f"Topic {topics[i]} rescaled to {sizes[i][0]} x {sizes[i][1]}" )
 
     return sizes
 
