@@ -10,28 +10,11 @@ import cv2
 from timeit import default_timer as timer
 from datetime import datetime
 import imageio
-import argparse
 import logging
 import traceback
+from cv_bridge import CvBridge
 
-# try to find cv_bridge:
-try:
-    from cv_bridge import CvBridge
-except ImportError:
-    # assume we are on an older ROS version, and try loading the dummy manifest
-    # to see if that fixes the import error
-    try:
-        import roslib
-
-        roslib.load_manifest("bag2video")
-        from cv_bridge import CvBridge
-    except Exception:
-        logging.critical("Could not find ROS package: cv_bridge.")
-        logging.critical(
-            "If ROS version is pre-Groovy, try putting this package in ROS_PACKAGE_PATH."
-        )
-        traceback.print_exc()
-        sys.exit(1)
+import bag2video_common
 
 
 def get_sizes(
@@ -42,7 +25,7 @@ def get_sizes(
     start_time=rospy.Time(0),
     stop_time=rospy.Time(sys.maxsize),
 ):
-    logging.debug("Resizing height to topic %s (index %d)." % (topics[index], index))
+    logging.debug(f"Resizing height to topic {topics[index]} (index {index}).")
     sizes = []
 
     for topic in topics:
@@ -54,8 +37,7 @@ def get_sizes(
             sizes.append((msg.width, msg.height))
         except Exception:  # \todo{} Should use a more specific exception
             logging.critical(
-                "No messages found for topic %s, or message does not have height/width."
-                % topic
+                f"No messages found for topic {topic}, or message does not have height/width."
             )
             traceback.print_exc()
             sys.exit(1)
@@ -64,10 +46,7 @@ def get_sizes(
 
     # output original and scaled sizes
     for i in range(len(topics)):
-        logging.info(
-            "Topic %s originally of height %s and width %s"
-            % (topics[i], sizes[i][0], sizes[i][1])
-        )
+        logging.info(f"Topic {topics[i]} originally {sizes[i][0]} x {sizes[i][1]}")
         image_height = sizes[i][1]
         image_width = sizes[i][0]
 
@@ -76,10 +55,7 @@ def get_sizes(
             int(1.0 * image_width * target_height / image_height),
             target_height,
         )
-        logging.info(
-            "Topic %s rescaled to height %s and width %s."
-            % (topics[i], sizes[i][0], sizes[i][1])
-        )
+        logging.info(f"Topic {topics[i]} rescaled to {sizes[i][0]} x {sizes[i][1]}")
 
     return sizes
 
@@ -96,7 +72,7 @@ def get_frequency(
         topic_frequency = info[1][topic][
             3
         ]  # returns the reciprocal of the median difference in timestamps for the topic
-        logging.info("Topic %s has a frequency of %s." % (topic, topic_frequency))
+        logging.info(f"Topic {topic} has a frequency of {topic_frequency}.")
         if topic_frequency is not None:
             frequency = max(frequency, topic_frequency)
 
@@ -107,14 +83,6 @@ def get_frequency(
         sys.exit(1)
 
     return frequency
-
-
-def calc_out_size(sizes):
-    return (sum(size[0] for size in sizes), sizes[0][1])
-
-
-def merge_images(images, sizes):
-    return cv2.hconcat([cv2.resize(images[i], sizes[i]) for i in range(len(images))])
 
 
 def write_frames(
@@ -158,18 +126,16 @@ def write_frames(
         reps = frame_num_next - frame_num
 
         logging.debug(
-            "Topic %s updated at time %s seconds, frame %s."
-            % (topic, time, frame_num_next)
+            f"Topic {topic} updated at time {time} seconds, frame {frame_num_next}."
         )
 
         # prevent unnecessary calculations
         if reps > 0:
             # record the current information up to this point in time
             logging.info(
-                "Writing image %s at time %.6f seconds, frame %s for %s frames."
-                % (num_msgs, time, frame_num, reps)
+                f"Writing image {num_msgs} at ROS time {time:.6f} seconds, frame {frame_num} for {reps} frames."
             )
-            merged_image = merge_images(images, sizes)
+            merged_image = bag2video_common.merge_images(images, sizes)
 
             if timestamp:
                 dt = datetime.fromtimestamp(time)
@@ -214,102 +180,8 @@ def noshow(win, img):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Extract and encode video from bag files."
-    )
-    parser.add_argument(
-        "bagfiles", nargs="+", help="Specifies the location of the bag file."
-    )
+    args = bag2video_common.video_argparser()
 
-    parser.add_argument(
-        "--topic", nargs=1, help="Image topics to merge in output video."
-    )
-
-    parser.add_argument(
-        "--index",
-        "-i",
-        action="store",
-        default=0,
-        type=int,
-        help="Resizes all images to match the height of the topic specified. Default 0.",
-    )
-    parser.add_argument(
-        "--scale",
-        "-x",
-        action="store",
-        default=1,
-        type=float,
-        help="Global scale for all images. Default 1.",
-    )
-    parser.add_argument(
-        "--outfile",
-        "-o",
-        action="store",
-        default=None,
-        help="Destination of the video file. Defaults to the folder of the bag file.",
-    )
-    parser.add_argument(
-        "--fps",
-        "-f",
-        action="store",
-        default=None,
-        type=float,
-        help="FPS of the output video. If not specified, FPS will be set to the maximum frequency of the topics.",
-    )
-    parser.add_argument(
-        "--viz", "-v", action="store_true", help="Display frames in a GUI window."
-    )
-    parser.add_argument(
-        "--start",
-        "-s",
-        action="store",
-        default=0,
-        type=float,
-        help="Rostime representing where to start in the bag.",
-    )
-    parser.add_argument(
-        "--end",
-        "-e",
-        action="store",
-        default=sys.maxsize,
-        type=float,
-        help="Rostime representing where to stop in the bag.",
-    )
-    parser.add_argument(
-        "--encoding",
-        choices=("rgb8", "bgr8", "mono8"),
-        default="rgb8",
-        help="Encoding of the deserialized image. Default rgb8.",
-    )
-    parser.add_argument(
-        "--codec",
-        "-c",
-        action="store",
-        default="h264",
-        help="Specifies FFMPEG codec to use.  Defaults to h264",
-    )
-    parser.add_argument(
-        "--log",
-        "-l",
-        action="store",
-        default="INFO",
-        help="Logging level. Default INFO.",
-    )
-
-    parser.add_argument(
-        "--timestamp", action="store_true", help="Write timestamp into each image"
-    )
-
-    args = parser.parse_args()
-
-    # logging setup
-    numeric_level = getattr(logging, args.log.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {args.log.upper()}.")
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(message)s", level=numeric_level
-    )
-    logging.info(f"Logging at level {args.log.upper()}.")
     if args.viz:
         imshow_f = imshow
     else:
@@ -319,20 +191,10 @@ if __name__ == "__main__":
     start_time = rospy.Time(args.start)
     stop_time = rospy.Time(args.end)
 
-    if start_time > stop_time:
-        logging.critical("Start time is after stop time.")
-        traceback.print_exc()
-        sys.exit(1)
-
-    if args.index >= len(args.topic):
-        logging.critical("Index specified for resizing is out of bounds.")
-        traceback.print_exc()
-        sys.exit(1)
-
     writer = None
 
     for bagfile in args.bagfiles:
-        logging.info("Proccessing bag %s." % bagfile)
+        logging.info(f"Proccessing bag {bagfile}")
         outfile = args.outfile
         if outfile is None:
             folder, name = os.path.split(bagfile)
@@ -343,9 +205,9 @@ if __name__ == "__main__":
         if not fps:
             logging.info("Calculating ideal output framerate.")
             fps = get_frequency(bag, args.topic, start_time, stop_time)
-            logging.info("Output framerate of %.3f." % fps)
+            logging.info(f"Output framerate of {fps:.3f}.")
         else:
-            logging.info("Using manually set framerate of %.3f." % fps)
+            logging.info(f"Using manually set framerate of {fps:.3f}")
 
         logging.info("Calculating video sizes.")
         sizes = get_sizes(
@@ -358,10 +220,8 @@ if __name__ == "__main__":
         )
 
         logging.info("Calculating final image size.")
-        out_width, out_height = calc_out_size(sizes)
-        logging.info(
-            "Resulting video of width %s and height %s." % (out_width, out_height)
-        )
+        out_width, out_height = bag2video_common.calc_out_size(sizes)
+        logging.info(f"Resulting video size {out_width} x {out_height}")
 
         logging.info("Opening video writer.")
         # fourcc = cv2.VideoWriter_fourcc(*args.fourcc) # opencv
@@ -378,7 +238,7 @@ if __name__ == "__main__":
             )
         # writer = imageio.get_writer(outfile, fps=fps, mode='I', format="FFMPEG", macro_block_size=1) # imageio
 
-        logging.info("Writing video at %s." % outfile)
+        logging.info(f"Writing video at {outfile}")
         write_frames(
             bag=bag,
             writer=writer,
