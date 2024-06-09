@@ -177,7 +177,7 @@ def main():
             topics=args.topic,
             sizes=sizes,
             fps=fps,
-            viz=args.viz,
+            viz=args.imshow,
             encoding=args.encoding,
             start_time=args.start,
             stop_time=args.end,

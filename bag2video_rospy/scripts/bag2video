@@ -182,7 +182,7 @@ def noshow(win, img):
 if __name__ == "__main__":
     args = bag2video_common.video_argparser()
 
-    if args.viz:
+    if args.imshow:
         imshow_f = imshow
     else:
         imshow_f = noshow
