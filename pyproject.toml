@@ -21,7 +21,7 @@ dependencies = [
     "rosbags-image"
 ]
 requires-python = ">=3.10"
-readme = "../README.md"
+readme = "README.md"
 license = {text = "BSD-3-Clause"}
 classifiers = [
     "License :: OSI Approved :: BSD License",
@@ -33,8 +33,11 @@ classifiers = [
 Homepage = "https://github.com/apl-ocean-engineering/bag2video"
 
 [project.scripts]
-bag2images = "bag2video.bag2images:main"
-bag2video = "bag2video.bag2video:main"
+bag2images = "bag2video_rosbags.bag2images:main"
+bag2video = "bag2video_rosbags.bag2video:main"
 
 [tool.pdm]
 distribution = true
+
+[tool.pdm.build]
+exclude = ["bag2video_rospy"]

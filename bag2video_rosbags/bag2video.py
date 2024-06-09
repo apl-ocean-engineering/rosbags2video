@@ -15,8 +15,8 @@ import imageio
 import argparse
 import traceback
 
-import bag2video
-from bag2video import sec_to_ns, stamp_to_sec
+import bag2video_rosbags
+from bag2video_common import sec_to_ns, stamp_to_sec
 
 
 def write_frames(
@@ -73,7 +73,7 @@ def write_frames(
                     "Writing image %s at time %.6f seconds, frame %s for %s frames."
                     % (num_msgs, time, frame_num, reps)
                 )
-                merged_image = bag2video.merge_images(images, sizes)
+                merged_image = bag2video_rosbags.merge_images(images, sizes)
 
                 if add_timestamp:
                     dt = datetime.fromtimestamp(time)
@@ -257,7 +257,7 @@ def main():
             fps = args.fps
             if not fps:
                 logging.info("Calculating ideal output framerate.")
-                fps = bag2video.get_frequency(
+                fps = bag2video_rosbags.get_frequency(
                     bag_reader, args.topic, args.start, args.end
                 )
                 logging.info("Output framerate of %.3f." % fps)
@@ -265,12 +265,12 @@ def main():
                 logging.info("Using manually set framerate of %.3f." % fps)
 
             logging.info("Calculating video sizes.")
-            sizes = bag2video.get_sizes(
+            sizes = bag2video_rosbags.get_sizes(
                 bag_reader, topics=args.topic, index=args.index, scale=args.scale
             )
 
             logging.info("Calculating final image size.")
-            out_width, out_height = bag2video.calc_out_size(sizes)
+            out_width, out_height = bag2video_rosbags.calc_out_size(sizes)
             logging.info(
                 "Resulting video of width %s and height %s." % (out_width, out_height)
             )

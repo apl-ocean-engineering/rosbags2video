@@ -28,7 +28,6 @@ This version uses [PDM](https://pdm-project.org/en/latest/) as its build engine.
 Then
 
 ```
-cd rosbags
 pdm install
 ```
 

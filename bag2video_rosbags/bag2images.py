@@ -3,6 +3,7 @@
 from __future__ import division
 import numpy as np
 from rosbags.highlevel import AnyReader
+from rosbags.image import message_to_cvimage
 from timeit import default_timer as timer
 import sys
 import os
@@ -11,13 +12,11 @@ import logging
 import traceback
 import argparse
 from pathlib import Path
-from cv_bridge import CvBridge
 from concurrent.futures import ThreadPoolExecutor, wait
 import concurrent.futures
 
-import bag2video
-
-from bag2video import stamp_to_sec, sec_to_ns
+import bag2video_rosbags
+from bag2video_common import stamp_to_sec, sec_to_ns
 
 
 def write_image(outpath, image):
@@ -35,7 +34,6 @@ def write_frames(
     encoding="bgr8",
     skip=1,
 ):
-    bridge = CvBridge()
     convert = {topics[i]: i for i in range(len(topics))}
 
     images = [
@@ -65,9 +63,9 @@ def write_frames(
                 logging.info(
                     "Writing image %s at time %.6f seconds." % (num_msgs, time)
                 )
-                image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
+                image = message_to_cvimage(msg, encoding)
                 images[convert[topic]] = image
-                merged_image = bag2video.merge_images(images, sizes)
+                merged_image = bag2video_rosbags.merge_images(images, sizes)
 
                 outpath = outdir / ("image_%06d.png" % num_msgs)
                 logging.debug("Writing %s" % outpath)
@@ -195,12 +193,12 @@ def main():
         bag_reader.open()
 
         logging.info("Calculating video sizes.")
-        sizes = bag2video.get_sizes(
+        sizes = bag2video_rosbags.get_sizes(
             bag_reader, topics=args.topic, index=args.index, scale=args.scale
         )
 
         logging.info("Calculating final image size.")
-        out_width, out_height = bag2video.calc_out_size(sizes)
+        out_width, out_height = bag2video_rosbags.calc_out_size(sizes)
         logging.info(
             "Resulting video of width %s and height %s." % (out_width, out_height)
         )

@@ -2,17 +2,8 @@ from __future__ import division
 from rosbags.image import message_to_cvimage
 from rosbags.highlevel import AnyReaderError
 import sys
-import cv2
 import logging
 import traceback
-
-
-def stamp_to_sec(stamp):
-    return stamp.sec + 10.0e-10 * stamp.nanosec
-
-
-def sec_to_ns(sec):
-    return int(sec * 1e9)
 
 
 def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
@@ -77,11 +68,3 @@ def get_frequency(bag_reader, topics=None, start_time=0, stop_time=sys.maxsize):
         sys.exit(1)
 
     return highest_freq
-
-
-def calc_out_size(sizes):
-    return (sum(size[0] for size in sizes), sizes[0][1])
-
-
-def merge_images(images, sizes):
-    return cv2.hconcat([cv2.resize(images[i], sizes[i]) for i in range(len(images))])
