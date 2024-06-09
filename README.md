@@ -8,6 +8,18 @@ bag2video
 
 Every effort is made to guarantee parity between these codebases but they are distinct and may have slightly different behaviors.
 
+## Dependencies
+
+Both versions depends on:
+
+* `imageio-ffmpeg`
+* `numpy`
+* `opencv-python`
+
+PDM will automatically resolve these dependencies for the rosbags version.
+
+The ROS version may require manual installation of some dependencies.
+
 ## Installing rospy / rosbag version
 
 Clone this repo into a Catkin workspace, then build the workspace.
