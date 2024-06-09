@@ -10,12 +10,12 @@ import os
 import imageio
 import logging
 import traceback
-import argparse
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, wait
 import concurrent.futures
 
 import bag2video_rosbags
+import bag2video_common
 from bag2video_common import stamp_to_sec, sec_to_ns
 
 
@@ -65,7 +65,7 @@ def write_frames(
                 )
                 image = message_to_cvimage(msg, encoding)
                 images[convert[topic]] = image
-                merged_image = bag2video_rosbags.merge_images(images, sizes)
+                merged_image = bag2video_common.merge_images(images, sizes)
 
                 outpath = outdir / ("image_%06d.png" % num_msgs)
                 logging.debug("Writing %s" % outpath)
@@ -83,82 +83,7 @@ def write_frames(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Extract and encode video from bag files."
-    )
-
-    parser.add_argument(
-        "bagfiles", nargs="+", help="Specifies the location of the bag file."
-    )
-
-    parser.add_argument(
-        "--topic",
-        nargs=1,
-        help="Image topic to show in output video (maybe specified multiple times).",
-    )
-
-    parser.add_argument(
-        "--index",
-        "-i",
-        action="store",
-        default=0,
-        type=int,
-        help="Resizes all images to match the height of the topic specified. Default 0.",
-    )
-    parser.add_argument(
-        "--scale",
-        "-x",
-        action="store",
-        default=1,
-        type=float,
-        help="Global scale for all images. Default 1.",
-    )
-    parser.add_argument(
-        "--outdir",
-        "-o",
-        action="store",
-        required=True,
-        type=Path,
-        help="Destination directory for output",
-    )
-
-    parser.add_argument(
-        "--start",
-        "-s",
-        action="store",
-        default=0,
-        type=float,
-        help="Rostime representing where to start in the bag.",
-    )
-    parser.add_argument(
-        "--end",
-        "-e",
-        action="store",
-        default=sys.maxsize,
-        type=float,
-        help="Rostime representing where to stop in the bag.",
-    )
-
-    parser.add_argument("--skip", default=1, type=int, help="Extract every N'th image.")
-
-    parser.add_argument(
-        "--encoding",
-        choices=("rgb8", "bgr8", "mono8"),
-        default="bgr8",
-        help="Encoding of the deserialized image. Default bgr8.",
-    )
-
-    parser.add_argument(
-        "--log",
-        "-l",
-        action="store",
-        default="INFO",
-        help="Logging level. Default INFO.",
-    )
-
-    parser.add_argument(
-        "--timestamp", action="store_true", help="Write timestamp into each image"
-    )
+    parser = bag2video_common.images_argparser()
 
     args = parser.parse_args()
 
@@ -198,7 +123,7 @@ def main():
         )
 
         logging.info("Calculating final image size.")
-        out_width, out_height = bag2video_rosbags.calc_out_size(sizes)
+        out_width, out_height = bag2video_common.calc_out_size(sizes)
         logging.info(
             "Resulting video of width %s and height %s." % (out_width, out_height)
         )

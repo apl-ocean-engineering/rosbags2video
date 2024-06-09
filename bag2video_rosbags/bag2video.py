@@ -12,10 +12,10 @@ import os
 import cv2
 import logging
 import imageio
-import argparse
 import traceback
 
 import bag2video_rosbags
+import bag2video_common
 from bag2video_common import sec_to_ns, stamp_to_sec
 
 
@@ -73,7 +73,7 @@ def write_frames(
                     "Writing image %s at time %.6f seconds, frame %s for %s frames."
                     % (num_msgs, time, frame_num, reps)
                 )
-                merged_image = bag2video_rosbags.merge_images(images, sizes)
+                merged_image = bag2video_common.merge_images(images, sizes)
 
                 if add_timestamp:
                     dt = datetime.fromtimestamp(time)
@@ -126,98 +126,7 @@ def imshow(win, img):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Extract and encode video from bag files."
-    )
-
-    parser.add_argument(
-        "bagfiles", nargs="+", help="Specifies the location of the bag file."
-    )
-
-    parser.add_argument(
-        "--topic",
-        action="append",
-        help="Image topic to show in output video (maybe specified multiple times).",
-    )
-
-    parser.add_argument(
-        "--index",
-        "-i",
-        action="store",
-        default=0,
-        type=int,
-        help="Resizes all images to match the height of the topic specified. Default 0.",
-    )
-    parser.add_argument(
-        "--scale",
-        "-x",
-        action="store",
-        default=1,
-        type=float,
-        help="Global scale for all images. Default 1.",
-    )
-    parser.add_argument(
-        "--outfile",
-        "-o",
-        action="store",
-        default=None,
-        help="Destination of the video file. Defaults to the folder of the bag file.",
-    )
-    parser.add_argument(
-        "--fps",
-        "-f",
-        action="store",
-        default=None,
-        type=float,
-        help="FPS of the output video. If not specified, FPS will be set to the maximum frequency of the topics.",
-    )
-    parser.add_argument(
-        "--viz",
-        "-v",
-        action="store",
-        default=False,
-        help="Display frames in a GUI window.",
-    )
-    parser.add_argument(
-        "--start",
-        "-s",
-        action="store",
-        default=0,
-        type=float,
-        help="Rostime representing where to start in the bag.",
-    )
-    parser.add_argument(
-        "--end",
-        "-e",
-        action="store",
-        default=sys.maxsize,
-        type=float,
-        help="Rostime representing where to stop in the bag.",
-    )
-    parser.add_argument(
-        "--encoding",
-        choices=("rgb8", "bgr8", "mono8"),
-        default="rgb8",
-        help="Encoding of the deserialized image. Default rgb8.",
-    )
-    parser.add_argument(
-        "--codec",
-        "-c",
-        action="store",
-        default="h264",
-        help="Specifies FFMPEG codec to use.  Defaults to h264",
-    )
-    parser.add_argument(
-        "--log",
-        "-l",
-        action="store",
-        default="INFO",
-        help="Logging level. Default INFO.",
-    )
-
-    parser.add_argument(
-        "--timestamp", action="store_true", help="Write timestamp into each image"
-    )
+    parser = bag2video_common.video_argparser()
 
     args = parser.parse_args()
 
@@ -270,7 +179,7 @@ def main():
             )
 
             logging.info("Calculating final image size.")
-            out_width, out_height = bag2video_rosbags.calc_out_size(sizes)
+            out_width, out_height = bag2video_common.calc_out_size(sizes)
             logging.info(
                 "Resulting video of width %s and height %s." % (out_width, out_height)
             )
