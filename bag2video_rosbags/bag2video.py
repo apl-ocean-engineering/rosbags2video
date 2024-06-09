@@ -12,7 +12,6 @@ import os
 import cv2
 import logging
 import imageio
-import traceback
 
 import bag2video_rosbags
 import bag2video_common
@@ -126,32 +125,9 @@ def imshow(win, img):
 
 
 def main():
-    parser = bag2video_common.video_argparser()
-
-    args = parser.parse_args()
-
-    # logging setup
-    numeric_level = getattr(logging, args.log.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % numeric_level)
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(message)s", level=numeric_level
-    )
-    logging.info("Logging at level %s.", args.log.upper())
-
-    logging.info(f"Movie will contain topics: {args.topic}")
-
-    if args.start > args.end:
-        logging.critical("Start time is after stop time.")
-        traceback.print_exc()
-        sys.exit(1)
+    args = bag2video_common.video_argparser()
 
     writer = None
-
-    if args.index >= len(args.topic):
-        logging.critical("Index specified for resizing is out of bounds.")
-        traceback.print_exc()
-        sys.exit(1)
 
     for bagfile in args.bagfiles:
         logging.info("Proccessing bag %s." % bagfile)

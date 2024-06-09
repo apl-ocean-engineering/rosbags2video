@@ -9,7 +9,6 @@ import sys
 import os
 import imageio
 import logging
-import traceback
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, wait
 import concurrent.futures
@@ -83,34 +82,13 @@ def write_frames(
 
 
 def main():
-    parser = bag2video_common.images_argparser()
-
-    args = parser.parse_args()
-
-    # logging setup
-    numeric_level = getattr(logging, args.log.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {args.log.upper()}")
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(message)s", level=numeric_level
-    )
-    logging.info(f"Logging at level {args.log.upper()}.")
+    args = bag2video_common.images_argparser()
 
     args.outdir.mkdir(exist_ok=True)
 
     # convert numbers into rospy Time
     start_time = args.start
     stop_time = args.end
-
-    if start_time > stop_time:
-        logging.critical("Start time is after stop time.")
-        traceback.print_exc()
-        sys.exit(1)
-
-    if args.index >= len(args.topic):
-        logging.critical("Index specified for resizing is out of bounds.")
-        traceback.print_exc()
-        sys.exit(1)
 
     for bagfile in args.bagfiles:
         logging.info("Proccessing bag %s." % bagfile)

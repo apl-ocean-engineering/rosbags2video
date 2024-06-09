@@ -1,5 +1,6 @@
 import argparse
 import sys
+import logging
 from pathlib import Path
 
 
@@ -67,6 +68,29 @@ def argparser_common(which_output):
     return parser
 
 
+def parse_and_validate(parser):
+    args = parser.parse_args()
+
+    # logging setup
+    numeric_level = getattr(logging, args.log.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError("Invalid log level: %s" % numeric_level)
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(message)s", level=numeric_level
+    )
+    logging.info("Logging at level %s.", args.log.upper())
+
+    logging.info(f"Movie will contain topics: {args.topic}")
+
+    if args.start > args.end:
+        parser.error("Start time is after stop time.")
+
+    if args.index >= len(args.topic):
+        parser.error("Index specified for resizing is out of bounds.")
+
+    return args
+
+
 def video_argparser():
     parser = argparser_common("video")
 
@@ -107,7 +131,7 @@ def video_argparser():
         help="Specifies FFMPEG codec to use.  Defaults to h264",
     )
 
-    return parser
+    return parse_and_validate(parser)
 
 
 def images_argparser():
@@ -130,4 +154,4 @@ def images_argparser():
         help="Encoding of the deserialized image. Default bgr8.",
     )
 
-    return parser
+    return parse_and_validate(parser)
