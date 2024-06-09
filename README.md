@@ -3,18 +3,68 @@ bag2video
 
 **PLEASE NOTE:**  This version contains _two_ codebases:
 
-* If installed with Catkin in a ROS workspace, it will use rospy / rosbag.
-* If installed with PDM (see below), it will use [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/)
+* If installed in a ROS workspace, it will use the version in `rospy/` which uses rospy / rosbag.
+* The version in `rosbags` can be installed with PDM (see below).  It uses [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/)
 
 Every effort is made to guarantee parity between these codebases but they are distinct and may have slightly different behaviors.
 
-## rospy / rosbag version
+## Installing rospy / rosbag version
+
+Checkout this repo into a Catkin workspace, then build the workspace.
+
+Then
+
+```
+rosrun bag2video bag2video
+rosrun bag2video bag2images
+```
+
+From there, see the `Usage` instructions below.
+
+## Installing the rosbags / rosbags-image version
+
+This version uses [PDM](https://pdm-project.org/en/latest/) as its build engine.  Install PDM per the [install instructions](https://pdm-project.org/en/latest/#recommended-installation-method).
+
+Then
+
+```
+cd rosbags
+pdm install
+```
+
+This will install dependencies in a venv.
+
+```
+eval $(pdm venv activate)
+```
+
+to activate the venv.  The scripts can be called as `bas2video` or `bag2images`
+
+From there, see the `Usage` instructions below.
+
+## Usage
+
+```
+usage: bag2video [-h] [--topic TOPIC] [--index INDEX] [--scale SCALE] [--outfile     OUTFILE] [--fps FPS] [--viz VIZ]
+                 [--start START] [--end END] [--encoding {rgb8,bgr8,mono8}] [--codec CODEC] [--log LOG] [--timestamp]
+                 bagfiles [bagfiles ...]
+```
+
+The minimal usage requires an image topic and one or more bagfiles:
 
 
+```
+bag2video --topic /image_raw a_bagfile.bag
+```
 
-## rosbags / rosbags-image version
+If multiple bagfiles are specified, they are combined into a single, continuous movie.
 
+Other options:
 
+* `--scale` will scale the images by SCALE before adding to the video/image.  Typically SCALE is less than zero, e.g. 0.5 means shrink the image by 1/2 in both dimensions (1/4 the original number of pixels).
+* `--timestamp` writes a timestamp in the image.
+
+Every effort is made for the two version to have the same options and behavior.
 
 
 
