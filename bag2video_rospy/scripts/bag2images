@@ -8,6 +8,8 @@ import sys
 import imageio
 import logging
 import traceback
+from datetime import datetime
+import cv2
 from cv_bridge import CvBridge
 
 import bag2video_common
@@ -66,6 +68,7 @@ def write_frames(
     viz=False,
     encoding="bgr8",
     skip=1,
+    timestamp=False,
 ):
     bridge = CvBridge()
     convert = {topics[i]: i for i in range(len(topics))}
@@ -92,6 +95,19 @@ def write_frames(
             # record the current information up to this point in time
             logging.info(f"Writing image {count} at ROS time {time:.6f} seconds.")
             merged_image = bag2video_common.merge_images(images, sizes)
+
+            if timestamp:
+                dt = datetime.fromtimestamp(time)
+                merged_image = cv2.putText(
+                    merged_image,
+                    dt.isoformat(),
+                    (0, 200),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    4,
+                    (255, 0, 0),
+                    2,
+                    cv2.LINE_AA,
+                )
 
             outpath = outdir / ("image_%06d.png" % count)
             logging.debug("Writing %s" % outpath)
@@ -145,6 +161,7 @@ if __name__ == "__main__":
             stop_time=stop_time,
             encoding=args.encoding,
             skip=args.skip,
+            timestamp=args.timestamp,
         )
 
         logging.info("Done.")

@@ -110,9 +110,8 @@ def video_argparser():
         help="FPS of the output video. If not specified, FPS will be set to the maximum frequency of the topics.",
     )
     parser.add_argument(
-        "--viz",
-        "-v",
-        action="store",
+        "--imshow",
+        action="store_true",
         default=False,
         help="Display frames in a GUI window.",
     )
