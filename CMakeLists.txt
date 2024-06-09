@@ -10,7 +10,7 @@ catkin_python_setup()
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  bag2images.py
-  bag2video.py
+  rospy_src/scripts/bag2images
+  rospy_src/scripts/bag2video
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

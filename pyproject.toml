@@ -1,0 +1,45 @@
+#
+# pyproject.toml describes the rosbags / rosbags-image (non-ROS)
+# toolset
+#
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "bag2video"
+version = "0.0.1"
+description = "Scripts to process ROS bagfiles into videos"
+authors = [
+    {name = "Aaron Marburg", email = "amarburg@uw.edu"},
+]
+dependencies = [
+    "imageio[ffmpeg]",
+    "opencv-python",
+    "rosbags",
+    "numpy",
+    "rosbags-image",
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/apl-ocean-engineering/bag2video"
+
+[project.scripts]
+bag2images = "bag2video.bag2images:main"
+bag2video = "bag2video.bag2video:main"
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.build]
+package-dir = "rosbags_src"
+includes = ["rosbags_src/"]
+excludes = ["rospy_src/"]

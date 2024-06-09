@@ -13,8 +13,8 @@ import logging
 import imageio
 import traceback
 
-import bag2lib
-from bag2lib import sec_to_ns, stamp_to_sec
+import bag2video
+from bag2video import sec_to_ns, stamp_to_sec
 
 def write_frames(bag_reader, writer, topics, sizes, fps, viz, encoding='bgr8', start_time=0,stop_time=sys.maxsize, add_timestamp=False):
     convert = { topics[i]:i for i in range(len(topics))}
@@ -50,7 +50,7 @@ def write_frames(bag_reader, writer, topics, sizes, fps, viz, encoding='bgr8', s
             if reps>0:
                 # record the current information up to this point in time
                 logging.info('Writing image %s at time %.6f seconds, frame %s for %s frames.' % (num_msgs, time, frame_num, reps))
-                merged_image = bag2lib.merge_images(images, sizes)
+                merged_image = bag2video.merge_images(images, sizes)
 
                 if add_timestamp:
                     dt = datetime.fromtimestamp(time)
@@ -160,16 +160,16 @@ def main():
             fps = args.fps
             if not fps:
                 logging.info('Calculating ideal output framerate.')
-                fps = bag2lib.get_frequency(bag_reader, args.topic, args.start, args.end)
+                fps = bag2video.get_frequency(bag_reader, args.topic, args.start, args.end)
                 logging.info('Output framerate of %.3f.'%fps)
             else:
                 logging.info('Using manually set framerate of %.3f.'%fps)
 
             logging.info('Calculating video sizes.')
-            sizes = bag2lib.get_sizes(bag_reader, topics=args.topic, index=args.index,scale = args.scale)
+            sizes = bag2video.get_sizes(bag_reader, topics=args.topic, index=args.index,scale = args.scale)
 
             logging.info('Calculating final image size.')
-            out_width, out_height = bag2lib.calc_out_size(sizes)
+            out_width, out_height = bag2video.calc_out_size(sizes)
             logging.info('Resulting video of width %s and height %s.'%(out_width,out_height))
 
             logging.info('Opening video writer.')

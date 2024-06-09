@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>bag2video</name>
+  <version>0.0.1</version>
+  <description>Scripts to process ROS bagfiles into videos</description>
+
+  <maintainer email="amarburg@uw.edu">Aaron Marburg</maintainer>
+  <author email="amarburg@uw.edu">Aaron Marburg</author> -->
+
+  <license>BSD-3-clause</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rospy</build_depend>
+
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>sensor_msgs</build_export_depend>
+
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+</package>

@@ -1,6 +1,28 @@
 bag2video
 =========
 
+**PLEASE NOTE:**  This version contains _two_ codebases:
+
+* If installed with Catkin in a ROS workspace, it will use rospy / rosbag.
+* If installed with PDM (see below), it will use [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/)
+
+Every effort is made to guarantee parity between these codebases but they are distinct and may have slightly different behaviors.
+
+## rospy / rosbag version
+
+
+
+## rosbags / rosbags-image version
+
+
+
+
+
+-----
+-----
+
+# Original README
+
 Convert images from multiple topics in a rosbag to a constant framerate video with topics displayed side to side. Conversion from timestamps to constant framerate is achieved through duplicating frames. Images for each topic will be scaled to the same height and placed side to side horizontally.
 
 This should not be used for precise conversions. The primary purpose is to provide a quick visual representation for the image contents of a bag file for multiple topics at once. There are several quirks present as a tradeoff for simplicity and faster processing:

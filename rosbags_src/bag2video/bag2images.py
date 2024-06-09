@@ -15,8 +15,8 @@ from cv_bridge import CvBridge
 from concurrent.futures import ThreadPoolExecutor, wait
 import concurrent.futures
 
-import bag2lib
-from bag2lib import stamp_to_sec, sec_to_ns
+import bag2video
+from bag2video import stamp_to_sec, sec_to_ns
 
 def write_image( outpath, image ):
     imageio.imwrite(outpath, image )
@@ -49,7 +49,7 @@ def write_frames(bag_reader, outdir, topics, sizes, start_time=0,
                 logging.info('Writing image %s at time %.6f seconds.' % (num_msgs, time) )
                 image = np.asarray(bridge.imgmsg_to_cv2(msg, encoding))
                 images[convert[topic]] = image
-                merged_image = bag2lib.merge_images(images, sizes)
+                merged_image = bag2video.merge_images(images, sizes)
 
                 outpath = outdir / ( "image_%06d.png" % num_msgs )
                 logging.debug("Writing %s" % outpath)
@@ -134,10 +134,10 @@ def main():
         bag_reader.open()
 
         logging.info('Calculating video sizes.')
-        sizes = bag2lib.get_sizes(bag_reader, topics=args.topic, index=args.index,scale = args.scale)
+        sizes = bag2video.get_sizes(bag_reader, topics=args.topic, index=args.index,scale = args.scale)
 
         logging.info('Calculating final image size.')
-        out_width, out_height = bag2lib.calc_out_size(sizes)
+        out_width, out_height = bag2video.calc_out_size(sizes)
         logging.info('Resulting video of width %s and height %s.'%(out_width,out_height))
 
         write_frames(bag_reader=bag_reader, outdir=args.outdir, topics=args.topic, sizes=sizes,
