@@ -1,4 +1,4 @@
-name: Check Implementation
+name: Pytest
 
 on:
   push:
@@ -7,15 +7,12 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  CLANG_TIDY: true
-
 jobs:
   test-implementation:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.10']
+        python-version: ['3.10', '3.11']
         os: [ubuntu-latest]
 
     steps:
