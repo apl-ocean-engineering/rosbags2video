@@ -1,37 +1,21 @@
 bag2video
 =========
 
-**PLEASE NOTE:**  This version contains _two_ codebases:
+This codebase has migrate to using [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/), and is designed to be installed with PDM (see below).
 
-* If installed in a ROS workspace, it will use the version in `bag2video_rospy/` which uses rospy / rosbag, which depends on a working ROS installation.
-* The version in `rosbags` can be installed with PDM (see below).  It uses [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/).  This version **does not** depend on having ROS installed.
-
-Every effort is made to guarantee parity between these codebases but they are distinct and may have slightly different behaviors.
+This version **does not** depend on having ROS installed.
 
 ## Dependencies
 
-Both versions depends on:
+This version depends on:
 
 * `imageio-ffmpeg`
 * `numpy`
 * `opencv-python`
+* `rosbags`
+* `rosbags-image`
 
 PDM will automatically resolve these dependencies for the rosbags version.
-
-The ROS version may require manual installation of some dependencies.
-
-## Installing rospy / rosbag version
-
-Clone this repo into a Catkin workspace, then build the workspace.
-
-Then
-
-```
-rosrun bag2video bag2video
-rosrun bag2video bag2images
-```
-
-From there, see the `Usage` instructions below.
 
 ## Installing the rosbags / rosbags-image version
 
@@ -43,7 +27,7 @@ Then, in the `bag2video` direectory
 pdm install
 ```
 
-This will install dependencies in a venv.
+This will install dependencies in a venv.  Then,
 
 ```
 eval $(pdm venv activate)
