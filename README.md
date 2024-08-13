@@ -1,6 +1,100 @@
 bag2video
 =========
 
+**PLEASE NOTE:**  This version contains _two_ codebases:
+
+* If installed in a ROS workspace, it will use the version in `bag2video_rospy/` which uses rospy / rosbag, which depends on a working ROS installation.
+* The version in `rosbags` can be installed with PDM (see below).  It uses [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/).  This version **does not** depend on having ROS installed.
+
+Every effort is made to guarantee parity between these codebases but they are distinct and may have slightly different behaviors.
+
+## Dependencies
+
+Both versions depends on:
+
+* `imageio-ffmpeg`
+* `numpy`
+* `opencv-python`
+
+PDM will automatically resolve these dependencies for the rosbags version.
+
+The ROS version may require manual installation of some dependencies.
+
+## Installing rospy / rosbag version
+
+Clone this repo into a Catkin workspace, then build the workspace.
+
+Then
+
+```
+rosrun bag2video bag2video
+rosrun bag2video bag2images
+```
+
+From there, see the `Usage` instructions below.
+
+## Installing the rosbags / rosbags-image version
+
+This version uses [PDM](https://pdm-project.org/en/latest/) as its build engine.  Install PDM per the [install instructions](https://pdm-project.org/en/latest/#recommended-installation-method).
+
+Then, in the `bag2video` direectory
+
+```
+pdm install
+```
+
+This will install dependencies in a venv.
+
+```
+eval $(pdm venv activate)
+```
+
+to activate the venv.  The scripts can be called as `bag2video` or `bag2images`
+
+From there, see the `Usage` instructions below.
+
+## Usage
+
+```
+usage: bag2video [-h]
+                 [--topic TOPIC]
+                 [--index INDEX]
+                 [--scale SCALE]
+                 [--outfile OUTFILE]
+                 [--fps FPS]
+                 [--imshow]
+                 [--start START]
+                 [--end END]
+                 [--encoding {rgb8,bgr8,mono8}]
+                 [--codec CODEC]
+                 [--log LOG]
+                 [--timestamp]
+                 bagfiles [bagfiles ...]
+```
+
+The minimal usage requires an image topic, an output location, and one or more bagfiles:
+
+
+```
+bag2video -o test.mp4 --topic /image_raw a_bagfile.bag
+```
+
+If multiple bagfiles are specified, they are combined into a single, continuous movie.
+
+Other options:
+
+* `--scale` will scale the images by SCALE before adding to the video/image.  Typically SCALE is less than zero, e.g. 0.5 means shrink the image by 1/2 in both dimensions (1/4 the original number of pixels).
+* `--timestamp` writes a timestamp in the image.
+
+Every effort is made for the rospy and rosbags versions to have the same options and behavior.
+
+
+
+-----
+-----
+
+# Original README
+
 Convert images from multiple topics in a rosbag to a constant framerate video with topics displayed side to side. Conversion from timestamps to constant framerate is achieved through duplicating frames. Images for each topic will be scaled to the same height and placed side to side horizontally.
 
 This should not be used for precise conversions. The primary purpose is to provide a quick visual representation for the image contents of a bag file for multiple topics at once. There are several quirks present as a tradeoff for simplicity and faster processing:
@@ -46,14 +140,6 @@ This script is heavily modified from the original; it uses Python 3.
       --log LOG, -l LOG     Logging level. Default INFO.
 
 
-# Installation instructions
+# License
 
-# Installation
-
-This package can either be installed with pip:
-
-```
-pip install -e .
-```
-
-which will place the scripts in the local install path (`~/.local/bin`), or it can be built/installed in a catkin workspace.
+This version is heavily modified from code originally released by Oregon State University, and retains the original's [LICENSE](license).
