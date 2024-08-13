@@ -41,3 +41,6 @@ distribution = true
 
 [tool.pdm.build]
 exclude = ["bag2video_rospy"]
+
+[tool.pdm.dev-dependencies]
+test = ["pytest"]
