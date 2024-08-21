@@ -1,5 +1,5 @@
 name: Documentation Improvement
-description: Report an issue related to bag2video documentation.
+description: Report an issue related to rosbags2video documentation.
 title: "[DOC]: <Please write a descriptive title after the '[DOC]: ' prefix>"
 labels: [documentation, needs triage]
 
@@ -16,9 +16,9 @@ body:
       label: Documentation Change Type
       description: Please indicate what type of documentation issue you are reporting.
       options:
-        - Adding new documentation to the bag2video documentation
-        - Changing existing bag2video driver documentation
-        - Removing existing bag2video driver documentation
+        - Adding new documentation to the rosbags2video documentation
+        - Changing existing rosbags2video driver documentation
+        - Removing existing rosbags2video driver documentation
     validations:
       required: true
 
