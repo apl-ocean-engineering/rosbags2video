@@ -1,4 +1,4 @@
-bag2video
+rosbags2video
 =========
 
 This codebase has migrate to using [rosbags](https://pypi.org/project/rosbags/) and [rosbags-image](https://pypi.org/project/rosbags-image/), and is designed to be installed with PDM (see below).
@@ -19,23 +19,26 @@ PDM will automatically resolve these dependencies for the rosbags version.
 
 ## Installing the rosbags / rosbags-image version
 
-This version uses [PDM](https://pdm-project.org/en/latest/) as its build engine.  Install PDM per the [install instructions](https://pdm-project.org/en/latest/#recommended-installation-method).
+This version uses [PDM](https://pdm-project.org/en/latest/) as its build engine.  To use:
 
-Then, in the `bag2video` direectory
+1. Install PDM per the [install instructions](https://pdm-project.org/en/latest/#recommended-installation-method).
+
+2. In the `rosbags2video` direectory
 
 ```
+pdm use
 pdm install
 ```
 
-This will install dependencies in a venv.  Then,
+This will install dependencies in a venv.
+
+3.  Activate the venv:
 
 ```
 eval $(pdm venv activate)
 ```
 
-to activate the venv.  The scripts can be called as `bag2video` or `bag2images`
-
-From there, see the `Usage` instructions below.
+The scripts can be called as `bag2video` or `bag2images`.  From there, see the `Usage` instructions below.
 
 ## Usage
 
@@ -72,6 +75,9 @@ Other options:
 
 Every effort is made for the rospy and rosbags versions to have the same options and behavior.
 
+# License
+
+This version is heavily modified from code originally released by Oregon State University, and retains the original's [LICENSE](license).
 
 
 -----
@@ -125,5 +131,3 @@ This script is heavily modified from the original; it uses Python 3.
 
 
 # License
-
-This version is heavily modified from code originally released by Oregon State University, and retains the original's [LICENSE](license).

@@ -7,7 +7,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [project]
-name = "bag2video"
+name = "rosbags2video"
 version = "0.0.1"
 description = "Scripts to process ROS bagfiles into videos"
 authors = [
@@ -30,17 +30,14 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/apl-ocean-engineering/bag2video"
+Homepage = "https://github.com/apl-ocean-engineering/rosbags2video"
 
 [project.scripts]
-bag2images = "bag2video.bag2images:main"
-bag2video = "bag2video.bag2video:main"
+bag2images = "rosbags2video.bag2images:main"
+bag2video = "rosbags2video.bag2video:main"
 
 [tool.pdm]
 distribution = true
-
-[tool.pdm.build]
-exclude = ["bag2video_rospy"]
 
 [tool.pdm.dev-dependencies]
 test = ["pytest"]

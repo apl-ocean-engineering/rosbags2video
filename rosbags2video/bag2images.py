@@ -13,8 +13,8 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, wait
 import concurrent.futures
 
-import bag2video
-from bag2video import stamp_to_sec, sec_to_ns
+import rosbags2video
+from rosbags2video import stamp_to_sec, sec_to_ns
 
 
 def write_image(outpath, image):
@@ -63,7 +63,7 @@ def write_frames(
                 )
                 image = message_to_cvimage(msg, encoding)
                 images[convert[topic]] = image
-                merged_image = bag2video.merge_images(images, sizes)
+                merged_image = rosbags2video.merge_images(images, sizes)
 
                 outpath = outdir / ("image_%06d.png" % num_msgs)
                 logging.debug("Writing %s" % outpath)
@@ -81,7 +81,7 @@ def write_frames(
 
 
 def main():
-    args = bag2video.images_argparser()
+    args = rosbags2video.images_argparser()
 
     args.outdir.mkdir(exist_ok=True)
 
@@ -95,12 +95,12 @@ def main():
         bag_reader.open()
 
         logging.info("Calculating video sizes.")
-        sizes = bag2video.get_sizes(
+        sizes = rosbags2video.get_sizes(
             bag_reader, topics=args.topic, index=args.index, scale=args.scale
         )
 
         logging.info("Calculating final image size.")
-        out_width, out_height = bag2video.calc_out_size(sizes)
+        out_width, out_height = rosbags2video.calc_out_size(sizes)
         logging.info(
             "Resulting video of width %s and height %s." % (out_width, out_height)
         )

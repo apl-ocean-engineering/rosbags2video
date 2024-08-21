@@ -16,9 +16,9 @@ body:
       label: Feature Type
       description: Please indicate what type of feature request you would like to propose.
       options:
-        - Adding new functionality to thbag2video
-        - Changing existing functionality in bag2video
-        - Removing existing functionality in bag2video
+        - Adding new functionality to throsbags2video
+        - Changing existing functionality in rosbags2video
+        - Removing existing functionality in rosbags2video
     validations:
       required: true
 
