@@ -2,7 +2,8 @@ import argparse
 import sys
 import logging
 from pathlib import Path
-
+from rosbags.highlevel import AnyReader
+import os
 
 def argparser_common(which_output):
     parser = argparse.ArgumentParser(
@@ -11,6 +12,14 @@ def argparser_common(which_output):
 
     parser.add_argument(
         "bagfiles", nargs="+", help="Specifies the location of the bag file."
+    )
+
+    parser.add_argument(
+        "--automatic",
+        action="store",
+        default=False,
+        type=bool,
+        help="Will use the image topic if there is only one image topic; otherwise, lists the image topics."
     )
 
     parser.add_argument(
@@ -80,14 +89,40 @@ def parse_and_validate(parser):
     )
     logging.info("Logging at level %s.", args.log.upper())
 
-    logging.info(f"Movie will contain topics: {args.topic}")
+    # Checking for the topic
+    topic = args.topic
+
+    if args.automatic: 
+        # ignore args.topic
+        for bagfile in args.bagfiles:
+            logging.info("Automatically finding the image topic from %s." % bagfile)
+            bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
+            bag_reader.open()
+
+            image_topics_list = []
+            for topic_name in bag_reader.topics.keys():
+                if "image" in topic_name:
+                    image_topics_list.append(topic_name)
+        
+            if len(image_topics_list) > 1: 
+                logging.info(f"More than one image topic detected: {str(image_topics_list)}")
+                parser.error("Please specify a single image topic using the --topic argument.")
+            else: 
+                topic = image_topics_list
+                break
+            bag_reader.close()
+    elif args.topic is None: 
+        parser.error("Please specify a topic using the --topic argument OR set the --automatic argument to True.")
+
+    logging.info(f"Output will contain the topic: {topic}")
 
     if args.start > args.end:
         parser.error("Start time is after stop time.")
 
-    if args.index >= len(args.topic):
+    if args.index >= len(topic):
         parser.error("Index specified for resizing is out of bounds.")
 
+    args.topic = topic
     return args
 
 
