@@ -5,6 +5,7 @@ from pathlib import Path
 from rosbags.highlevel import AnyReader
 import os
 
+
 def argparser_common(which_output):
     parser = argparse.ArgumentParser(
         description=f"Extract and encode {which_output} from bag files."
@@ -19,7 +20,7 @@ def argparser_common(which_output):
         action="store",
         default=False,
         type=bool,
-        help="Will use the image topic if there is only one image topic; otherwise, lists the image topics."
+        help="Will use the image topic if there is only one image topic; otherwise, lists the image topics.",
     )
 
     parser.add_argument(
@@ -92,7 +93,7 @@ def parse_and_validate(parser):
     # Checking for the topic
     topic = args.topic
 
-    if args.automatic: 
+    if args.automatic:
         # ignore args.topic
         for bagfile in args.bagfiles:
             logging.info("Automatically finding the image topic from %s." % bagfile)
@@ -103,16 +104,22 @@ def parse_and_validate(parser):
             for topic_name in bag_reader.topics.keys():
                 if "image" in topic_name:
                     image_topics_list.append(topic_name)
-        
-            if len(image_topics_list) > 1: 
-                logging.info(f"More than one image topic detected: {str(image_topics_list)}")
-                parser.error("Please specify a single image topic using the --topic argument.")
-            else: 
+
+            if len(image_topics_list) > 1:
+                logging.info(
+                    f"More than one image topic detected: {str(image_topics_list)}"
+                )
+                parser.error(
+                    "Please specify a single image topic using the --topic argument."
+                )
+            else:
                 topic = image_topics_list
                 break
             bag_reader.close()
-    elif args.topic is None: 
-        parser.error("Please specify a topic using the --topic argument OR set the --automatic argument to True.")
+    elif args.topic is None:
+        parser.error(
+            "Please specify a topic using the --topic argument OR set the --automatic argument to True."
+        )
 
     logging.info(f"Output will contain the topic: {topic}")
 
