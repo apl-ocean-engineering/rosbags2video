@@ -28,6 +28,7 @@ def write_frames(
     start_time=0,
     stop_time=sys.maxsize,
     add_timestamp=False,
+    use_bagtime=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
     frame_duration = 1.0 / fps
@@ -49,9 +50,14 @@ def write_frames(
     ):
         topic = connection.topic
         msg = bag_reader.deserialize(rawdata, connection.msgtype)
-        # print(f'DEBUG: {msg.header.stamp}')
+        # print(f'DEBUG: {msg.header.stamp}, {t}')
         # exit(0)
-        time = stamp_to_sec(msg.header.stamp)
+
+        if use_bagtime:
+            time = t / 1e9
+        else:
+            time = stamp_to_sec(msg.header.stamp)
+
         if init:
             image = message_to_cvimage(msg, encoding)
             images[convert[topic]] = image
@@ -181,6 +187,7 @@ def main():
             start_time=args.start,
             stop_time=args.end,
             add_timestamp=args.timestamp,
+            use_bagtime=args.bag_time,
         )
         logging.info("Done.")
         bag_reader.close()

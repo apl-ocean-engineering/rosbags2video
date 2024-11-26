@@ -44,6 +44,7 @@ def argparser_common(which_output):
         type=float,
         help="Rostime representing where to start in the bag.",
     )
+
     parser.add_argument(
         "--end",
         "-e",
@@ -59,6 +60,12 @@ def argparser_common(which_output):
         action="store",
         default="INFO",
         help="Logging level. Default INFO.",
+    )
+
+    parser.add_argument(
+        "--bag-time",
+        action="store_true",
+        help="Use bagfile time rather than header.stamp",
     )
 
     parser.add_argument(

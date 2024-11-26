@@ -31,6 +31,7 @@ def write_frames(
     viz=False,
     encoding="bgr8",
     skip=1,
+    use_bagtime=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
 
@@ -52,7 +53,11 @@ def write_frames(
         ):
             topic = connection.topic
             msg = bag_reader.deserialize(rawdata, connection.msgtype)
-            time = stamp_to_sec(msg.header.stamp)
+
+            if use_bagtime:
+                time = t / 1e9
+            else:
+                time = stamp_to_sec(msg.header.stamp)
 
             logging.debug("Topic %s updated at time %s seconds" % (topic, time))
 
@@ -114,6 +119,7 @@ def main():
             stop_time=stop_time,
             encoding=args.encoding,
             skip=args.skip,
+            use_bagtime=args.bag_time,
         )
 
         logging.info("Done.")
