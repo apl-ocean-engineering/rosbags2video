@@ -65,6 +65,12 @@ def argparser_common(which_output):
         "--timestamp", action="store_true", help="Write timestamp into each image"
     )
 
+    parser.add_argument(
+        "--raw-timestamp",
+        action="store_true",
+        help="Write raw timestamp into each image",
+    )
+
     return parser
 
 
