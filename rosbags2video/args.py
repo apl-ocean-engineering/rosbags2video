@@ -10,7 +10,7 @@ def argparser_common(which_output):
     )
 
     parser.add_argument(
-        "bagfiles", nargs="+", help="Specifies the location of the bag file."
+        "bagfiles", nargs="+", type=Path, help="Specifies the location of the bag file."
     )
 
     parser.add_argument(
