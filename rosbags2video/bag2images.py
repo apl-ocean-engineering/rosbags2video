@@ -5,7 +5,6 @@ import numpy as np
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
 from timeit import default_timer as timer
-import sys
 import os
 import imageio
 import logging
@@ -26,8 +25,8 @@ def write_frames(
     outdir,
     topics,
     sizes,
-    start_time=0,
-    stop_time=sys.maxsize,
+    start_time=None,
+    stop_time=None,
     viz=False,
     encoding="bgr8",
     skip=1,
@@ -44,12 +43,18 @@ def write_frames(
 
     pending = []
 
+    if start_time:
+        start_time = sec_to_ns(start_time)
+
+    if stop_time:
+        stop_time = sec_to_ns(stop_time)
+
     with ThreadPoolExecutor(max_workers=2) as executor:
         connections = [x for x in bag_reader.connections if x.topic in topics]
         for connection, t, rawdata in bag_reader.messages(
             connections=connections,
-            start=sec_to_ns(start_time),
-            stop=sec_to_ns(stop_time),
+            start=start_time,
+            stop=stop_time,
         ):
             topic = connection.topic
             msg = bag_reader.deserialize(rawdata, connection.msgtype)

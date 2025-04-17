@@ -1,5 +1,4 @@
 import argparse
-import sys
 import logging
 from pathlib import Path
 
@@ -40,7 +39,7 @@ def argparser_common(which_output):
         "--start",
         "-s",
         action="store",
-        default=0,
+        default=None,
         type=float,
         help="Rostime representing where to start in the bag.",
     )
@@ -49,7 +48,7 @@ def argparser_common(which_output):
         "--end",
         "-e",
         action="store",
-        default=sys.maxsize,
+        default=None,
         type=float,
         help="Rostime representing where to stop in the bag.",
     )
@@ -89,7 +88,7 @@ def parse_and_validate(parser):
 
     logging.info(f"Movie will contain topics: {args.topic}")
 
-    if args.start > args.end:
+    if args.start and args.end and args.start > args.end:
         parser.error("Start time is after stop time.")
 
     if args.index >= len(args.topic):
