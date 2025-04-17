@@ -7,7 +7,6 @@ from timeit import default_timer as timer
 from pathlib import Path
 from datetime import datetime
 import numpy as np
-import sys
 import os
 import cv2
 import logging
@@ -25,9 +24,10 @@ def write_frames(
     fps,
     viz,
     encoding="bgr8",
-    start_time=0,
-    stop_time=sys.maxsize,
+    start_time=None,
+    stop_time=None,
     add_timestamp=False,
+    use_bagtime=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
     frame_duration = 1.0 / fps
@@ -43,15 +43,26 @@ def write_frames(
 
     init = True
 
+    if start_time:
+        start_time = sec_to_ns(start_time)
+
+    if stop_time:
+        stop_time = sec_to_ns(stop_time)
+
     connections = [x for x in bag_reader.connections if x.topic in topics]
     for connection, t, rawdata in bag_reader.messages(
-        connections=connections, start=sec_to_ns(start_time), stop=sec_to_ns(stop_time)
+        connections=connections, start=start_time, stop=stop_time
     ):
         topic = connection.topic
         msg = bag_reader.deserialize(rawdata, connection.msgtype)
-        # print(f'DEBUG: {msg.header.stamp}')
+        # print(f'DEBUG: {msg.header.stamp}, {t}')
         # exit(0)
-        time = stamp_to_sec(msg.header.stamp)
+
+        if use_bagtime:
+            time = t / 1e9
+        else:
+            time = stamp_to_sec(msg.header.stamp)
+
         if init:
             image = message_to_cvimage(msg, encoding)
             images[convert[topic]] = image
@@ -141,6 +152,9 @@ def main():
             fps = args.fps
             if not fps:
                 logging.info("Calculating ideal output framerate.")
+                logging.info(f"Start time: {args.start}")
+                logging.info(f"End time: {args.end}")
+
                 fps = rosbags2video.get_frequency(
                     bag_reader, args.topic, args.start, args.end
                 )
@@ -181,6 +195,7 @@ def main():
             start_time=args.start,
             stop_time=args.end,
             add_timestamp=args.timestamp,
+            use_bagtime=args.bag_time,
         )
         logging.info("Done.")
         bag_reader.close()

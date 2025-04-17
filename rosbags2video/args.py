@@ -1,5 +1,4 @@
 import argparse
-import sys
 import logging
 from pathlib import Path
 from rosbags.highlevel import AnyReader
@@ -50,15 +49,16 @@ def argparser_common(which_output):
         "--start",
         "-s",
         action="store",
-        default=0,
+        default=None,
         type=float,
         help="Rostime representing where to start in the bag.",
     )
+
     parser.add_argument(
         "--end",
         "-e",
         action="store",
-        default=sys.maxsize,
+        default=None,
         type=float,
         help="Rostime representing where to stop in the bag.",
     )
@@ -69,6 +69,12 @@ def argparser_common(which_output):
         action="store",
         default="INFO",
         help="Logging level. Default INFO.",
+    )
+
+    parser.add_argument(
+        "--bag-time",
+        action="store_true",
+        help="Use bagfile time rather than header.stamp",
     )
 
     parser.add_argument(
@@ -123,7 +129,7 @@ def parse_and_validate(parser):
 
     logging.info(f"Output will contain the topic: {topic}")
 
-    if args.start > args.end:
+    if args.start and args.end and args.start > args.end:
         parser.error("Start time is after stop time.")
 
     if args.index >= len(topic):
