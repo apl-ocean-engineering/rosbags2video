@@ -2,7 +2,6 @@ import argparse
 import logging
 from pathlib import Path
 from rosbags.highlevel import AnyReader
-import os
 
 
 def argparser_common(which_output):
@@ -11,15 +10,7 @@ def argparser_common(which_output):
     )
 
     parser.add_argument(
-        "bagfiles", nargs="+", help="Specifies the location of the bag file."
-    )
-
-    parser.add_argument(
-        "--automatic",
-        action="store",
-        default=False,
-        type=bool,
-        help="Will use the image topic if there is only one image topic; otherwise, lists the image topics.",
+        "bagfiles", nargs="+", type=Path, help="Specifies the location of the bag file."
     )
 
     parser.add_argument(
@@ -97,45 +88,41 @@ def parse_and_validate(parser):
     logging.info("Logging at level %s.", args.log.upper())
 
     # Checking for the topic
-    topic = args.topic
+    topics = args.topic
 
-    if args.automatic:
+    if topics is None or len(topics) == 0:
         # ignore args.topic
         for bagfile in args.bagfiles:
-            logging.info("Automatically finding the image topic from %s." % bagfile)
-            bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
-            bag_reader.open()
+            logging.info("No topics specified, checking bags for image topics")
 
-            image_topics_list = []
-            for topic_name in bag_reader.topics.keys():
-                if "image" in topic_name:
-                    image_topics_list.append(topic_name)
+            with AnyReader(args.bagfiles) as bag_reader:
+                image_topics_list = [
+                    conn.topic
+                    for conn in bag_reader.connections
+                    if "Image" in conn.msgtype
+                ]
 
-            if len(image_topics_list) > 1:
-                logging.info(
-                    f"More than one image topic detected: {str(image_topics_list)}"
-                )
-                parser.error(
-                    "Please specify a single image topic using the --topic argument."
-                )
-            else:
-                topic = image_topics_list
-                break
-            bag_reader.close()
-    elif args.topic is None:
-        parser.error(
-            "Please specify a topic using the --topic argument OR set the --automatic argument to True."
-        )
+                if len(image_topics_list) > 1:
+                    logging.info(
+                        f"Multiple image topics detected: {str(image_topics_list)}"
+                    )
+                    logging.info(
+                        "Please specify image topics using the --topic argument."
+                    )
+                    exit(0)
+                else:
+                    topics = image_topics_list
+                    break
 
-    logging.info(f"Output will contain the topic: {topic}")
+    logging.info(f"Output will contain the topic: {topics}")
 
     if args.start and args.end and args.start > args.end:
         parser.error("Start time is after stop time.")
 
-    if args.index >= len(topic):
+    if args.index >= len(topics):
         parser.error("Index specified for resizing is out of bounds.")
 
-    args.topic = topic
+    args.topic = topics
     return args
 
 
