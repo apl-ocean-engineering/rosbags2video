@@ -1,6 +1,7 @@
 import argparse
 import logging
 from pathlib import Path
+from rosbags.highlevel import AnyReader
 
 
 def argparser_common(which_output):
@@ -9,7 +10,7 @@ def argparser_common(which_output):
     )
 
     parser.add_argument(
-        "bagfiles", nargs="+", help="Specifies the location of the bag file."
+        "bagfiles", nargs="+", type=Path, help="Specifies the location of the bag file."
     )
 
     parser.add_argument(
@@ -86,14 +87,42 @@ def parse_and_validate(parser):
     )
     logging.info("Logging at level %s.", args.log.upper())
 
-    logging.info(f"Movie will contain topics: {args.topic}")
+    # Checking for the topic
+    topics = args.topic
+
+    if topics is None or len(topics) == 0:
+        # ignore args.topic
+        for bagfile in args.bagfiles:
+            logging.info("No topics specified, checking bags for image topics")
+
+            with AnyReader(args.bagfiles) as bag_reader:
+                image_topics_list = [
+                    conn.topic
+                    for conn in bag_reader.connections
+                    if "Image" in conn.msgtype
+                ]
+
+                if len(image_topics_list) > 1:
+                    logging.info(
+                        f"Multiple image topics detected: {str(image_topics_list)}"
+                    )
+                    logging.info(
+                        "Please specify image topics using the --topic argument."
+                    )
+                    exit(0)
+                else:
+                    topics = image_topics_list
+                    break
+
+    logging.info(f"Output will contain the topic: {topics}")
 
     if args.start and args.end and args.start > args.end:
         parser.error("Start time is after stop time.")
 
-    if args.index >= len(args.topic):
+    if args.index >= len(topics):
         parser.error("Index specified for resizing is out of bounds.")
 
+    args.topic = topics
     return args
 
 

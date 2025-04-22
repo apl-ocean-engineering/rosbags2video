@@ -4,7 +4,6 @@ from __future__ import division
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
 from timeit import default_timer as timer
-from pathlib import Path
 from datetime import datetime
 import numpy as np
 import os
@@ -139,68 +138,70 @@ def main():
 
     writer = None
 
-    for bagfile in args.bagfiles:
-        logging.info("Proccessing bag %s." % bagfile)
-        outfile = args.outfile
-        if outfile is None:
-            folder, name = os.path.split(bagfile)
+    logging.info("Processing bags %s." % (args.bagfiles))
+
+    outfile = args.outfile
+    if outfile is None:
+        if len(args.bagfiles) == 1:
+            folder, name = os.path.split(args.bagfiles[0])
             outfile = os.path.join(folder, name[: name.rfind(".")]) + ".mp4"
-        bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
-        bag_reader.open()
-
-        if not writer:
-            fps = args.fps
-            if not fps:
-                logging.info("Calculating ideal output framerate.")
-                logging.info(f"Start time: {args.start}")
-                logging.info(f"End time: {args.end}")
-
-                fps = rosbags2video.get_frequency(
-                    bag_reader, args.topic, args.start, args.end
-                )
-                logging.info("Output framerate of %.3f." % fps)
-            else:
-                logging.info("Using manually set framerate of %.3f." % fps)
-
-            logging.info("Calculating video sizes.")
-            sizes = rosbags2video.get_sizes(
-                bag_reader, topics=args.topic, index=args.index, scale=args.scale
+        else:
+            logging.error(
+                "Multiple bagfiles specified, but no output file.  Can't automatically set output filename."
             )
+            exit(-1)
+    elif outfile.suffix == "":
+        outfile = outfile.with_suffix(".mp4")
 
-            logging.info("Calculating final image size.")
-            out_width, out_height = rosbags2video.calc_out_size(sizes)
-            logging.info(
-                "Resulting video of width %s and height %s." % (out_width, out_height)
+    with AnyReader(args.bagfiles) as bag_reader:
+        fps = args.fps
+        if fps:
+            logging.info("Using manually set framerate of %.3f." % fps)
+        else:
+            logging.info("Calculating ideal output framerate.")
+            logging.info(f"Start time: {args.start}")
+            logging.info(f"End time: {args.end}")
+
+            fps = rosbags2video.get_frequency(
+                bag_reader, args.topic, args.start, args.end
             )
+            logging.info("Output framerate of %.3f." % fps)
 
-            logging.info("Opening video writer.")
-            writer = imageio.get_writer(
-                outfile,
-                format="FFMPEG",
-                mode="I",
-                fps=fps,
-                quality=10,
-                codec=args.codec,
-            )
-
-        logging.info("Writing video at %s." % outfile)
-        write_frames(
-            bag_reader=bag_reader,
-            writer=writer,
-            topics=args.topic,
-            sizes=sizes,
-            fps=fps,
-            viz=args.imshow,
-            encoding=args.encoding,
-            start_time=args.start,
-            stop_time=args.end,
-            add_timestamp=args.timestamp,
-            use_bagtime=args.bag_time,
+        logging.info("Calculating video sizes.")
+        sizes = rosbags2video.get_sizes(
+            bag_reader, topics=args.topic, index=args.index, scale=args.scale
         )
-        logging.info("Done.")
-        bag_reader.close()
 
-    writer.close()
+        logging.info("Calculating final image size.")
+        out_width, out_height = rosbags2video.calc_out_size(sizes)
+        logging.info(
+            "Resulting video of width %s and height %s." % (out_width, out_height)
+        )
+
+        logging.info("Opening video writer.")
+        with imageio.get_writer(
+            outfile,
+            format="FFMPEG",
+            mode="I",
+            fps=fps,
+            quality=10,
+            codec=args.codec,
+        ) as writer:
+            logging.info("Writing video at %s." % outfile)
+            write_frames(
+                bag_reader=bag_reader,
+                writer=writer,
+                topics=args.topic,
+                sizes=sizes,
+                fps=fps,
+                viz=args.imshow,
+                encoding=args.encoding,
+                start_time=args.start,
+                stop_time=args.end,
+                add_timestamp=args.timestamp,
+                use_bagtime=args.bag_time,
+            )
+            logging.info("Done.")
 
 
 if __name__ == "__main__":
