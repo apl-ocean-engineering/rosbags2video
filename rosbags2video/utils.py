@@ -37,6 +37,11 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
                     rawdata, connection.msgtype
                 )  # read one message
 
+                if stamp_to_sec(msg.header.stamp) == 0.0:
+                    logging.critical(
+                        "Header stamp is 0.0, you may want to use --bag-time to ignore the header timestamp"
+                    )
+
                 # message_to_cvimage will transparently handle either Image of CompressedImage
                 img = message_to_cvimage(msg)
                 img_sz = img.shape
