@@ -79,29 +79,29 @@ def write_frames(
                 )
                 merged_image = rosbags2video.merge_images(images, sizes)
 
-                if add_timestamp:
-                    dt = datetime.fromtimestamp(time)
+                # if add_timestamp:
+                #     dt = datetime.fromtimestamp(time)
 
-                    ts_font = cv2.FONT_HERSHEY_SIMPLEX
-                    ts_thickness = 1
-                    ts_color = (255, 0, 0)
+                #     ts_font = cv2.FONT_HERSHEY_SIMPLEX
+                #     ts_thickness = 1
+                #     ts_color = (255, 0, 0)
 
-                    ts_height = int(merged_image.shape[0] * 0.05)
-                    ts_scale = cv2.getFontScaleFromHeight(
-                        ts_font, ts_height, ts_thickness
-                    )
+                #     ts_height = int(merged_image.shape[0] * 0.05)
+                #     ts_scale = cv2.getFontScaleFromHeight(
+                #         ts_font, ts_height, ts_thickness
+                #     )
 
-                    datestr = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    merged_image = cv2.putText(
-                        merged_image,
-                        datestr,
-                        (0, ts_height + 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        ts_scale,
-                        ts_color,
-                        ts_thickness,
-                        cv2.LINE_AA,
-                    )
+                #     datestr = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+                #     merged_image = cv2.putText(
+                #         merged_image,
+                #         datestr,
+                #         (0, ts_height + 10),
+                #         cv2.FONT_HERSHEY_SIMPLEX,
+                #         ts_scale,
+                #         ts_color,
+                #         ts_thickness,
+                #         cv2.LINE_AA,
+                #     )
 
                 for i in range(reps):
                     # writer.write(merged_image) # opencv
@@ -115,6 +115,29 @@ def write_frames(
                 num_msgs += 1
 
             image = message_to_cvimage(msg, encoding)
+
+            if add_timestamp:
+                dt = datetime.fromtimestamp(time)
+
+                ts_font = cv2.FONT_HERSHEY_SIMPLEX
+                ts_thickness = 2
+                ts_color = (255, 0, 0)
+
+                ts_height = int(image.shape[0] * 0.05)
+                ts_scale = cv2.getFontScaleFromHeight(ts_font, ts_height, ts_thickness)
+
+                datestr = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+                image = cv2.putText(
+                    image,
+                    datestr,
+                    (0, ts_height + 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    ts_scale,
+                    ts_color,
+                    ts_thickness,
+                    cv2.LINE_AA,
+                )
+
             images[convert[topic]] = image
 
     end = timer()

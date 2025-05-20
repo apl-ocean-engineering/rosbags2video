@@ -7,8 +7,10 @@ from rosbags.image import message_to_cvimage
 from timeit import default_timer as timer
 import sys
 import os
+import cv2
 import imageio
 import logging
+from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, wait
 import concurrent.futures
@@ -31,6 +33,7 @@ def write_frames(
     viz=False,
     encoding="bgr8",
     skip=1,
+    add_timestamp=False,
     use_bagtime=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
@@ -67,6 +70,31 @@ def write_frames(
                     "Writing image %s at time %.6f seconds." % (num_msgs, time)
                 )
                 image = message_to_cvimage(msg, encoding)
+
+                if add_timestamp:
+                    dt = datetime.fromtimestamp(time)
+
+                    ts_font = cv2.FONT_HERSHEY_SIMPLEX
+                    ts_thickness = 2
+                    ts_color = (255, 0, 0)
+
+                    ts_height = int(image.shape[0] * 0.05)
+                    ts_scale = cv2.getFontScaleFromHeight(
+                        ts_font, ts_height, ts_thickness
+                    )
+
+                    datestr = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+                    image = cv2.putText(
+                        image.copy(),
+                        datestr,
+                        (0, ts_height + 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        ts_scale,
+                        ts_color,
+                        ts_thickness,
+                        cv2.LINE_AA,
+                    )
+
                 images[convert[topic]] = image
                 merged_image = rosbags2video.merge_images(images, sizes)
 
@@ -75,6 +103,22 @@ def write_frames(
 
                 pending.append(executor.submit(write_image, outpath, merged_image))
                 # imageio.imwrite( outpath, merged_image )
+
+                # Overwrite the timestamp in black
+                if add_timestamp:
+                    ts_color = (0, 0, 0)
+                    image = cv2.putText(
+                        image.copy(),
+                        datestr,
+                        (0, ts_height + 10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        ts_scale,
+                        ts_color,
+                        ts_thickness,
+                        cv2.LINE_AA,
+                    )
+
+                images[convert[topic]] = image
 
                 if len(pending) > 10:
                     wait(pending, return_when=concurrent.futures.FIRST_COMPLETED)
@@ -120,6 +164,7 @@ def main():
             encoding=args.encoding,
             skip=args.skip,
             use_bagtime=args.bag_time,
+            add_timestamp=args.timestamp,
         )
 
         logging.info("Done.")
