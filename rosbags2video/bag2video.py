@@ -4,10 +4,8 @@ from __future__ import division
 from rosbags.highlevel import AnyReader
 from rosbags.image import message_to_cvimage
 from timeit import default_timer as timer
-from pathlib import Path
 from datetime import datetime
 import numpy as np
-import os
 import cv2
 import logging
 import imageio
@@ -195,68 +193,58 @@ def main():
 
     writer = None
 
-    for bagfile in args.bagfiles:
-        logging.info("Proccessing bag %s." % bagfile)
-        outfile = args.outfile
-        if outfile is None:
-            folder, name = os.path.split(bagfile)
-            outfile = os.path.join(folder, name[: name.rfind(".")]) + ".mp4"
-        bag_reader = AnyReader([Path(os.path.join(Path.cwd(), Path(bagfile)))])
-        bag_reader.open()
+    outfile = args.outfile
 
-        if not writer:
-            fps = args.fps
-            if not fps:
-                logging.info("Calculating ideal output framerate.")
-                logging.info(f"Start time: {args.start}")
-                logging.info(f"End time: {args.end}")
+    bag_reader = AnyReader(args.bagfiles)
+    bag_reader.open()
 
-                fps = rosbags2video.get_frequency(
-                    bag_reader, args.topic, args.start, args.end
-                )
-                logging.info("Output framerate of %.3f." % fps)
-            else:
-                logging.info("Using manually set framerate of %.3f." % fps)
-
-            logging.info("Calculating video sizes.")
-            sizes = rosbags2video.get_sizes(
-                bag_reader, topics=args.topic, index=args.index, scale=args.scale
+    if not writer:
+        fps = args.fps
+        if not fps:
+            logging.info("Calculating ideal output framerate.")
+            fps = rosbags2video.get_frequency(
+                bag_reader, args.topic, args.start, args.end
             )
+            logging.info("Output framerate of %.3f." % fps)
+        else:
+            logging.info("Using manually set framerate of %.3f." % fps)
 
-            logging.info("Calculating final image size.")
-            out_width, out_height = rosbags2video.calc_out_size(sizes)
-            logging.info(
-                "Resulting video of width %s and height %s." % (out_width, out_height)
-            )
-
-            logging.info("Opening video writer.")
-            writer = imageio.get_writer(
-                outfile,
-                format="FFMPEG",
-                mode="I",
-                fps=fps,
-                quality=10,
-                codec=args.codec,
-            )
-
-        logging.info("Writing video at %s." % outfile)
-        write_frames(
-            bag_reader=bag_reader,
-            writer=writer,
-            topics=args.topic,
-            sizes=sizes,
-            fps=fps,
-            viz=args.imshow,
-            encoding=args.encoding,
-            start_time=args.start,
-            stop_time=args.end,
-            add_timestamp=args.timestamp,
-            add_raw_timestamp=args.raw_timestamp,
-            use_bagtime=args.bag_time,
-            timestamp_all=args.timestamp_all,
+        logging.info("Calculating video sizes.")
+        sizes = rosbags2video.get_sizes(
+            bag_reader, topics=args.topic, index=args.index, scale=args.scale
         )
-        logging.info("Done.")
-        bag_reader.close()
+
+        logging.info("Calculating final image size.")
+        out_width, out_height = rosbags2video.calc_out_size(sizes)
+        logging.info(
+            "Resulting video of width %s and height %s." % (out_width, out_height)
+        )
+
+        logging.info("Opening video writer.")
+        writer = imageio.get_writer(
+            outfile,
+            format="FFMPEG",
+            mode="I",
+            fps=fps,
+            quality=10,
+            codec=args.codec,
+        )
+
+    logging.info("Writing video at %s." % outfile)
+    write_frames(
+        bag_reader=bag_reader,
+        writer=writer,
+        topics=args.topic,
+        sizes=sizes,
+        fps=fps,
+        viz=args.imshow,
+        encoding=args.encoding,
+        start_time=args.start,
+        stop_time=args.end,
+        add_timestamp=args.timestamp,
+    )
+    logging.info("Done.")
+    bag_reader.close()
 
     writer.close()
 
