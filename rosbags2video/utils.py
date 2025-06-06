@@ -69,7 +69,13 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
     return sizes
 
 
-def get_frequency(bag_reader, topics=None, start_time=0, stop_time=sys.maxsize):
+def get_frequency(bag_reader, topics=None, start_time=None, stop_time=None):
+    if start_time is None:
+        start_time = bag_reader.start_time / 1e9
+
+    if stop_time is None:
+        stop_time = bag_reader.end_time / 1e9
+
     # uses the highest topic message frequency as framerate
     duration = min(10.0e-10 * bag_reader.duration, (stop_time - start_time))
     highest_freq = 0

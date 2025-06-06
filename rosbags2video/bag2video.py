@@ -6,7 +6,6 @@ from rosbags.image import message_to_cvimage
 from timeit import default_timer as timer
 from datetime import datetime
 import numpy as np
-import sys
 import cv2
 import logging
 import imageio
@@ -23,9 +22,12 @@ def write_frames(
     fps,
     viz,
     encoding="bgr8",
-    start_time=0,
-    stop_time=sys.maxsize,
+    start_time=None,
+    stop_time=None,
     add_timestamp=False,
+    add_raw_timestamp=False,
+    use_bagtime=False,
+    timestamp_all=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
     frame_duration = 1.0 / fps
@@ -41,17 +43,32 @@ def write_frames(
 
     init = True
 
+    if start_time:
+        start_time = sec_to_ns(start_time)
+
+    if stop_time:
+        stop_time = sec_to_ns(stop_time)
+
     connections = [x for x in bag_reader.connections if x.topic in topics]
     for connection, t, rawdata in bag_reader.messages(
-        connections=connections, start=sec_to_ns(start_time), stop=sec_to_ns(stop_time)
+        connections=connections, start=start_time, stop=stop_time
     ):
         topic = connection.topic
         msg = bag_reader.deserialize(rawdata, connection.msgtype)
-        # print(f'DEBUG: {msg.header.stamp}')
+        # print(f'DEBUG: {msg.header.stamp}, {t}')
         # exit(0)
-        time = stamp_to_sec(msg.header.stamp)
+
+        if use_bagtime:
+            time = t / 1e9
+        else:
+            time = stamp_to_sec(msg.header.stamp)
+
         if init:
             image = message_to_cvimage(msg, encoding)
+
+            if timestamp_all:
+                image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
+
             images[convert[topic]] = image
             frame_num = int(time / frame_duration)
             init = False
@@ -71,28 +88,9 @@ def write_frames(
                 )
                 merged_image = rosbags2video.merge_images(images, sizes)
 
-                if add_timestamp:
-                    dt = datetime.fromtimestamp(time)
-
-                    ts_font = cv2.FONT_HERSHEY_SIMPLEX
-                    ts_thickness = 1
-                    ts_color = (255, 0, 0)
-
-                    ts_height = int(merged_image.shape[0] * 0.05)
-                    ts_scale = cv2.getFontScaleFromHeight(
-                        ts_font, ts_height, ts_thickness
-                    )
-
-                    datestr = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    merged_image = cv2.putText(
-                        merged_image,
-                        datestr,
-                        (0, ts_height + 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        ts_scale,
-                        ts_color,
-                        ts_thickness,
-                        cv2.LINE_AA,
+                if not timestamp_all:
+                    merged_image = embed_timestamp(
+                        merged_image, time, add_timestamp, add_raw_timestamp
                     )
 
                 for i in range(reps):
@@ -107,12 +105,81 @@ def write_frames(
                 num_msgs += 1
 
             image = message_to_cvimage(msg, encoding)
+
+            if timestamp_all:
+                image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
+
             images[convert[topic]] = image
 
     end = timer()
     logging.info(
         f"Wrote {num_msgs} messages to {num_frames} frames in {end-start:.2f} seconds"
     )
+
+
+def embed_timestamp(merged_image, time, add_timestamp, add_raw_timestamp):
+    raw_y_offset = 0
+
+    ts_font = cv2.FONT_HERSHEY_SIMPLEX
+    ts_thickness = 2
+    ts_color = (0, 255, 0)
+
+    ts_height = int(merged_image.shape[0] * 0.05)
+    ts_scale = cv2.getFontScaleFromHeight(ts_font, ts_height, ts_thickness)
+
+    text_width = 0
+
+    if add_timestamp:
+        dt = datetime.fromtimestamp(time)
+
+        datestr = dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+        text_sz, baseline = cv2.getTextSize(datestr, ts_font, ts_scale, ts_thickness)
+
+        merged_image = cv2.rectangle(
+            merged_image, (0, 0), (text_sz[0], text_sz[1] + 15), (0, 0, 0, 0), -1
+        )
+
+        merged_image = cv2.putText(
+            merged_image,
+            datestr,
+            (0, ts_height + 10),
+            ts_font,
+            ts_scale,
+            ts_color,
+            ts_thickness,
+            cv2.LINE_AA,
+        )
+
+        raw_y_offset = text_sz[1] + 15
+        text_width = text_sz[0]
+
+    if add_raw_timestamp:
+        timestr = f"{time:.4f}"
+
+        text_sz, baseline = cv2.getTextSize(timestr, ts_font, ts_scale, ts_thickness)
+
+        box_width = max(text_width, text_sz[0])
+
+        merged_image = cv2.rectangle(
+            merged_image,
+            (0, raw_y_offset),
+            (box_width, raw_y_offset + text_sz[1] + 15),
+            (0, 0, 0, 0),
+            -1,
+        )
+
+        merged_image = cv2.putText(
+            merged_image,
+            timestr,
+            (0, raw_y_offset + ts_height + 10),
+            ts_font,
+            ts_scale,
+            ts_color,
+            ts_thickness,
+            cv2.LINE_AA,
+        )
+
+    return merged_image
 
 
 def imshow(win, img):
