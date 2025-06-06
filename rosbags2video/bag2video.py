@@ -30,6 +30,7 @@ def write_frames(
     add_timestamp=False,
     add_raw_timestamp=False,
     use_bagtime=False,
+    timestamp_all=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
     frame_duration = 1.0 / fps
@@ -61,6 +62,10 @@ def write_frames(
 
         if init:
             image = message_to_cvimage(msg, encoding)
+
+            if timestamp_all:
+                image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
+
             images[convert[topic]] = image
             frame_num = int(time / frame_duration)
             init = False
@@ -80,9 +85,10 @@ def write_frames(
                 )
                 merged_image = rosbags2video.merge_images(images, sizes)
 
-                merged_image = embed_timestamp(
-                    merged_image, time, add_timestamp, add_raw_timestamp
-                )
+                if not timestamp_all:
+                    merged_image = embed_timestamp(
+                        merged_image, time, add_timestamp, add_raw_timestamp
+                    )
 
                 for i in range(reps):
                     # writer.write(merged_image) # opencv
@@ -96,6 +102,10 @@ def write_frames(
                 num_msgs += 1
 
             image = message_to_cvimage(msg, encoding)
+
+            if timestamp_all:
+                image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
+
             images[convert[topic]] = image
 
     end = timer()
@@ -235,6 +245,7 @@ def main():
             add_timestamp=args.timestamp,
             add_raw_timestamp=args.raw_timestamp,
             use_bagtime=args.bag_time,
+            timestamp_all=args.timestamp_all,
         )
         logging.info("Done.")
         bag_reader.close()
