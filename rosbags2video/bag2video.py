@@ -242,6 +242,9 @@ def main():
         start_time=args.start,
         stop_time=args.end,
         add_timestamp=args.timestamp,
+        add_raw_timestamp=args.raw_timestamp,
+        use_bagtime=args.bag_time,
+        timestamp_all=args.timestamp_all,
     )
     logging.info("Done.")
     bag_reader.close()
