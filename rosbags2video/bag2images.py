@@ -31,6 +31,7 @@ def write_frames(
     encoding="bgr8",
     skip=1,
     use_bagtime=False,
+    ts_file=None,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
 
@@ -75,8 +76,12 @@ def write_frames(
                 images[convert[topic]] = image
                 merged_image = rosbags2video.merge_images(images, sizes)
 
-                outpath = outdir / ("image_%06d.png" % num_msgs)
+                filename = "image_%06d.png" % num_msgs
+                outpath = outdir / filename
                 logging.debug("Writing %s" % outpath)
+
+                if ts_file:
+                    ts_file.write(f"{time} {filename}\n")
 
                 pending.append(executor.submit(write_image, outpath, merged_image))
                 # imageio.imwrite( outpath, merged_image )
@@ -115,6 +120,11 @@ def main():
             "Resulting video of width %s and height %s." % (out_width, out_height)
         )
 
+        if args.timestamp_file:
+            ts_file = open(args.timestamp_file, "w")
+
+            ts_file.write("# Timestamp_sec  filename\n")
+
         write_frames(
             bag_reader=bag_reader,
             outdir=args.outdir,
@@ -125,7 +135,11 @@ def main():
             encoding=args.encoding,
             skip=args.skip,
             use_bagtime=args.bag_time,
+            ts_file=ts_file,
         )
+
+        if ts_file:
+            ts_file.close()
 
         logging.info("Done.")
 

@@ -173,4 +173,10 @@ def images_argparser():
         help="Encoding of the deserialized image. Default bgr8.",
     )
 
+    parser.add_argument(
+        "--timestamp-file",
+        type=Path,
+        help="Generate a file which correlates timestamp with filename",
+    )
+
     return parse_and_validate(parser)
