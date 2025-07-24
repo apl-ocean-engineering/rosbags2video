@@ -32,6 +32,7 @@ def write_frames(
     convert = {topics[i]: i for i in range(len(topics))}
     frame_duration = 1.0 / fps
 
+    # Initialize with 3 channels, will be adjusted if needed
     images = [
         np.zeros((sizes[i][1], sizes[i][0], 3), np.uint8) for i in range(len(topics))
     ]
@@ -64,7 +65,26 @@ def write_frames(
             time = stamp_to_sec(msg.header.stamp)
 
         if init:
-            image = message_to_cvimage(msg, encoding)
+            # Try to convert with the specified encoding first
+            try:
+                image = message_to_cvimage(msg, encoding)
+            except Exception as e:
+                # If conversion fails and it's likely a grayscale image, try mono8
+                if "8UC1" in str(e) or "mono" in str(e).lower():
+                    logging.info(
+                        f"Detected grayscale image, switching to mono8 encoding for topic {topic}"
+                    )
+                    encoding = "mono8"
+                    image = message_to_cvimage(msg, encoding)
+                    # Convert grayscale to 3-channel for consistency
+                    if len(image.shape) == 2:
+                        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                else:
+                    raise e
+
+            # Ensure all images are 3-channel for consistency
+            if len(image.shape) == 2:
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
             if timestamp_all:
                 image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
@@ -104,7 +124,26 @@ def write_frames(
                 frame_num = frame_num_next
                 num_msgs += 1
 
-            image = message_to_cvimage(msg, encoding)
+            # Try to convert with the current encoding
+            try:
+                image = message_to_cvimage(msg, encoding)
+            except Exception as e:
+                # If conversion fails and it's likely a grayscale image, try mono8
+                if "8UC1" in str(e) or "mono" in str(e).lower():
+                    logging.info(
+                        f"Detected grayscale image, switching to mono8 encoding for topic {topic}"
+                    )
+                    encoding = "mono8"
+                    image = message_to_cvimage(msg, encoding)
+                    # Convert grayscale to 3-channel for consistency
+                    if len(image.shape) == 2:
+                        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                else:
+                    raise e
+
+            # Ensure all images are 3-channel for consistency
+            if len(image.shape) == 2:
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
             if timestamp_all:
                 image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
