@@ -30,6 +30,29 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
     for topic in topics:
         try:
             connections = [x for x in bag_reader.connections if x.topic == topic]
+
+            # Check if topic exists in the bag
+            if not connections:
+                logging.critical(f"Topic '{topic}' not found in bag file.")
+                logging.critical("Available topics:")
+                for conn in bag_reader.connections:
+                    logging.critical(f"  {conn.topic}: {conn.msgtype}")
+                sys.exit(1)
+
+            # Check if the topic is an image type
+            connection = connections[0]
+            if not (
+                connection.msgtype.endswith("/Image")
+                or connection.msgtype.endswith("/CompressedImage")
+            ):
+                logging.critical(
+                    f"Topic '{topic}' is not an image topic (type: {connection.msgtype})."
+                )
+                logging.critical(
+                    "Only sensor_msgs/Image and sensor_msgs/CompressedImage topics are supported."
+                )
+                sys.exit(1)
+
             for connection, timestamp, rawdata in bag_reader.messages(
                 connections=connections
             ):
