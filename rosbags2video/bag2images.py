@@ -9,15 +9,40 @@ import os
 import imageio
 import logging
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, wait
+from threading import Semaphore
+from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 
 import rosbags2video
 from rosbags2video import stamp_to_sec, sec_to_ns
 
 
+# semaphore to limit the queue size to the pool
+semaphore = Semaphore(32)
+
 def write_image(outpath, image):
     imageio.imwrite(outpath, image)
+
+# proxy for submitting tasks that imposes a limit on the queue size
+def task_proxy(executor, function, *args, **kwargs):
+    global semaphore
+
+    # acquire the semaphore, blocks if occupied
+    semaphore.acquire()
+
+    # submit the task normally
+    future = executor.submit(function, *args, **kwargs)
+    # add the custom done callback
+    future.add_done_callback(task_complete_callback)
+	
+    return future
+
+# callback for completed tasks
+def task_complete_callback(future):
+    global semaphore
+    # release the semaphore
+    semaphore.release()
+
 
 
 def write_frames(
@@ -50,7 +75,7 @@ def write_frames(
     if stop_time:
         stop_time = sec_to_ns(stop_time)
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor() as executor:
         connections = [x for x in bag_reader.connections if x.topic in topics]
         for connection, t, rawdata in bag_reader.messages(
             connections=connections,
@@ -81,13 +106,13 @@ def write_frames(
                 logging.debug("Writing %s" % outpath)
 
                 if ts_file:
-                    ts_file.write(f"{time} {filename}\n")
+                    ts_file.write(f"{time},{filename}\n")
 
-                pending.append(executor.submit(write_image, outpath, merged_image))
+                pending.append(task_proxy(executor, write_image, outpath, merged_image))
                 # imageio.imwrite( outpath, merged_image )
 
-                if len(pending) > 10:
-                    wait(pending, return_when=concurrent.futures.FIRST_COMPLETED)
+                # if len(pending) > 10:
+                #     wait(pending, return_when=concurrent.futures.FIRST_COMPLETED)
 
             num_msgs += 1
 
@@ -122,8 +147,9 @@ def main():
 
         if args.timestamp_file:
             ts_file = open(args.timestamp_file, "w")
-
-            ts_file.write("# Timestamp_sec  filename\n")
+            ts_file.write("timestamp_sec,filename\n")
+        else:
+            ts_file = None
 
         write_frames(
             bag_reader=bag_reader,
