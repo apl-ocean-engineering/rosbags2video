@@ -36,6 +36,14 @@ def argparser_common(which_output):
     )
 
     parser.add_argument(
+        "--rotate",
+        default=0,
+        type=int,
+        choices=[0, 90, 180, 270],
+        help="Rotate image by the given value measured CLOCKWISE",
+    )
+
+    parser.add_argument(
         "--start",
         "-s",
         action="store",

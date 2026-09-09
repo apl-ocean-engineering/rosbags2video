@@ -12,6 +12,7 @@ import imageio
 
 import rosbags2video
 from rosbags2video import sec_to_ns, stamp_to_sec
+from rosbags2video.utils import rotate_image
 
 
 def write_frames(
@@ -27,6 +28,7 @@ def write_frames(
     add_timestamp=False,
     add_raw_timestamp=False,
     use_bagtime=False,
+    rotate=0,
     timestamp_all=False,
 ):
     convert = {topics[i]: i for i in range(len(topics))}
@@ -64,7 +66,7 @@ def write_frames(
             time = stamp_to_sec(msg.header.stamp)
 
         if init:
-            image = message_to_cvimage(msg, encoding)
+            image = rotate_image(message_to_cvimage(msg, encoding), rotate)
 
             if timestamp_all:
                 image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
@@ -104,7 +106,7 @@ def write_frames(
                 frame_num = frame_num_next
                 num_msgs += 1
 
-            image = message_to_cvimage(msg, encoding)
+            image = rotate_image(message_to_cvimage(msg, encoding), rotate)
 
             if timestamp_all:
                 image = embed_timestamp(image, time, add_timestamp, add_raw_timestamp)
@@ -211,7 +213,11 @@ def main():
 
         logging.info("Calculating video sizes.")
         sizes = rosbags2video.get_sizes(
-            bag_reader, topics=args.topic, index=args.index, scale=args.scale
+            bag_reader,
+            topics=args.topic,
+            index=args.index,
+            scale=args.scale,
+            rotate=args.rotate,
         )
 
         logging.info("Calculating final image size.")
@@ -241,6 +247,7 @@ def main():
         encoding=args.encoding,
         start_time=args.start,
         stop_time=args.end,
+        rotate=args.rotate,
         add_timestamp=args.timestamp,
     )
     logging.info("Done.")

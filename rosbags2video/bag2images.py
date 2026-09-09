@@ -106,7 +106,11 @@ def main():
 
         logging.info("Calculating video sizes.")
         sizes = rosbags2video.get_sizes(
-            bag_reader, topics=args.topic, index=args.index, scale=args.scale
+            bag_reader,
+            topics=args.topic,
+            index=args.index,
+            scale=args.scale,
+            rotate=args.rotate,
         )
 
         logging.info("Calculating final image size.")
