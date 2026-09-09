@@ -23,7 +23,20 @@ def merge_images(images, sizes):
     return cv2.hconcat([cv2.resize(images[i], sizes[i]) for i in range(len(images))])
 
 
-def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
+def rotate_image(img, rotate=0) -> cv2.Mat:
+    if rotate == 90:
+        imgout = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    elif rotate == 180:
+        imgout = cv2.rotate(img, cv2.ROTATE_180)
+    elif rotate == 270:
+        imgout = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    else:
+        imgout = img
+
+    return imgout
+
+
+def get_sizes(bag_reader, topics=None, index=0, scale=1.0, rotate=0):
     logging.debug(f"Resizing height to topic {topics[index]} (index {index}).")
     sizes = []
 
@@ -38,7 +51,8 @@ def get_sizes(bag_reader, topics=None, index=0, scale=1.0):
                 )  # read one message
 
                 # message_to_cvimage will transparently handle either Image of CompressedImage
-                img = message_to_cvimage(msg)
+                img = rotate_image(message_to_cvimage(msg), rotate)
+
                 img_sz = img.shape
 
                 # width, height
